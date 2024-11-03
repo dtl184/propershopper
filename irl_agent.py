@@ -36,7 +36,7 @@ if __name__ == "__main__":
     sock_game = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock_game.connect((HOST, PORT)) 
 
-    training_time = 150
+    training_time = 100
     episode_length = 800
     for i in range(1, training_time+1):
         # start = False 
