@@ -15,6 +15,27 @@ import pandas as pd
 import argparse
 from termcolor import colored
 
+class IrlAgent:
+    def __init__(self, action_space, alpha=0.5, gamma=0.8, epsilon=0.9, mini_epsilon=0.05, decay=0.999):
+        self.action_space = action_space 
+        self.alpha = alpha               # learning rate
+        self.gamma = gamma               # discount factor  
+        self.epsilon = epsilon           # exploit vs. explore probability
+        self.mini_epsilon = mini_epsilon # threshold for stopping the decay
+        self.decay = decay               
+    
+
+
+
+
+
+
+
+
+
+
+
+
 def euclidean_distance(pos1, pos2):
     # Calculate Euclidean distance between two points
     return ((pos1[0] - pos2[0])**2 + (pos1[1] - pos2[1])**2)**0.5 
