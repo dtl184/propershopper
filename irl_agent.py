@@ -24,10 +24,32 @@ class IrlAgent:
         self.mini_epsilon = mini_epsilon # threshold for stopping the decay
         self.decay = decay               
     
+    def feature_vector(self, state):
+        # Return the feature vector for the current state
+        return state['observation']['players'][0]['position']
 
 
+    def irl(self, feature_matrix, n_actions, discount, transition_probability,
+        trajectories, epochs, learning_rate):
 
+        n_states, d_states = feature_matrix.shape
 
+        # Initialise weights.
+        alpha = rn.uniform(size=(d_states,))
+
+        # Calculate the feature expectations \tilde{phi}.
+        feature_expectations = find_feature_expectations(feature_matrix,
+                                                        trajectories)
+
+        # Gradient descent on alpha.
+        for i in range(epochs):
+            # print("i: {}".format(i))
+            r = feature_matrix.dot(alpha)
+            expected_svf = find_expected_svf(n_states, r, n_actions, discount,
+                                            transition_probability, trajectories)
+            grad = feature_expectations - feature_matrix.T.dot(expected_svf)
+
+            alpha += learning_rate * grad
 
 
 
