@@ -14,9 +14,6 @@ class QLAgent:
         self.mini_epsilon = mini_epsilon # threshold for stopping the decay
         self.decay = decay               # value to decay the epsilon over time
         self.qtable = pd.DataFrame(data=np.zeros((20000, 7)), columns=[i for i in range(self.action_space)])  # generate the initial table 
-        # print(self.qtable.loc[6552])
-
-        # print(self.qtable)
     
     def trans(self, state, granularity=0.5):
         # You should design a function to transform the huge state into a learnable state for the agent
