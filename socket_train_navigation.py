@@ -165,6 +165,7 @@ if __name__ == "__main__":
 
         # reinitialize agent position
         state['observation']['players'][0]['position'] = get_init_pos(args.start) 
+        foo = state['observation']['players'][0]['position']
         sock_game.send(str.encode("0 RESET"))  # reset the game
         cnt = 0
         cur_ep_return = 0.
