@@ -43,8 +43,6 @@ class IRLAgent:
         )
     
     def update_policy(self):
-        if self.reward is None:
-            raise ValueError("Reward function not yet learned. Call learn_reward() first.")
         
         self.policy = find_policy(
             n_states=self.feature_matrix.shape[0],
@@ -55,8 +53,6 @@ class IRLAgent:
         )
     
     def choose_action(self, state):
-        if self.policy is None:
-            raise ValueError("Policy not yet derived. Call update_policy() first.")
         
         # Convert state into its corresponding index for the policy
         state_index = self.trans(state)
