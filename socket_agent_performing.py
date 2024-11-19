@@ -20,7 +20,7 @@ if __name__ == "__main__":
     # Initialize Q-learning agent
     action_space = len(action_commands) - 1   # Assuming your action space size is equal to the number of action commands
     agent = QLAgent(action_space)
-    agent.qtable = pd.read_json('qtable.json')
+    agent.qtable = pd.read_json('json_files/qtable.json')
 
     
     

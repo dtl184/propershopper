@@ -148,18 +148,7 @@ if __name__ == "__main__":
                     print("Success!") 
                     done = True 
                     # print(state['observation']['players'][0])
-                    # print(state['observation']['baskets']) 
-                # if finish and current_task.split()[1] == 'exit':
-                #     sock_game.send(str.encode("0 WEST"))  # send action to env
-                #     next_state = recv_socket_data(sock_game)  # get observation from env
-                #     next_state = json.loads(next_state) 
-                #     sock_game.send(str.encode("0 WEST"))  # send action to env
-                #     next_state = recv_socket_data(sock_game)  # get observation from env
-                #     next_state = json.loads(next_state) 
-                #     sock_game.send(str.encode("0 WEST"))  # send action to env
-                #     next_state = recv_socket_data(sock_game)  # get observation from env
-                #     next_state = json.loads(next_state) 
-                    # print(colored('Whole task succeeded', 'green'))
+
                 agent.learning(action_index, reward, state, next_state)
 
                 # Update state

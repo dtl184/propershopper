@@ -4,7 +4,7 @@ import json
 import selectors
 import socket
 import types
-
+import os
 from env import SupermarketEnv, SinglePlayerSupermarketEnv
 from norms.norm import NormWrapper
 from norms.norms import *
@@ -40,6 +40,8 @@ class SupermarketEventHandler:
         else:
             self.handle_exploratory_events()
         self.env.render(mode='violations')
+    
+
 
     def handle_exploratory_events(self):
         player = self.env.unwrapped.game.players[self.curr_player]
@@ -88,6 +90,7 @@ class SupermarketEventHandler:
             keys = pygame.key.get_pressed()
             if keys[pygame.K_UP]:  # up
                 self.env.step(self.single_player_action(PlayerAction.NORTH))
+                record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=1)
             elif keys[pygame.K_DOWN]:  # down
                 self.env.step(self.single_player_action(PlayerAction.SOUTH))
 
@@ -154,6 +157,16 @@ def get_action_json(action, env_, obs, reward, done, info_=None, violations=''):
     # print(action_json)
     # action_json = {"hello": "world"}
     return action_json
+
+def record_trajectory(state, action, filename="trajectories.json"):
+    trajectory = (state, action)
+    data = []
+
+    data.append(trajectory)
+
+    # Write the updated data back to the file
+    with open(filename, "w") as file:
+        json.dump(data, file, indent=4)
 
 
 def is_single_player(command_):
@@ -446,5 +459,6 @@ if __name__ == "__main__":
                 # Serialize the data to ensure it's JSON-serializable
                 json_to_send_serialized = serialize_data(json_to_send)                
                 data.outb = str.encode(json.dumps(json_to_send_serialized) + "\n")
+                #record_trajectory()
             env.render()
     sock_agent.close()
