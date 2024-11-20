@@ -93,13 +93,13 @@ class SupermarketEventHandler:
                 record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=1)
             elif keys[pygame.K_DOWN]:  # down
                 self.env.step(self.single_player_action(PlayerAction.SOUTH))
-
+                record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=2)
             elif keys[pygame.K_LEFT]:  # left
                 self.env.step(self.single_player_action(PlayerAction.WEST))
-
+                record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=4)
             elif keys[pygame.K_RIGHT]:  # right
                 self.env.step(self.single_player_action(PlayerAction.EAST))
-
+                record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=3)
         self.running = self.env.unwrapped.game.running
 
     def handle_interactive_events(self):
@@ -158,15 +158,38 @@ def get_action_json(action, env_, obs, reward, done, info_=None, violations=''):
     # action_json = {"hello": "world"}
     return action_json
 
-def record_trajectory(state, action, filename="trajectories.json"):
-    trajectory = (state, action)
-    data = []
+def trans(state, granularity=0.1):
+    x, y = state[0]  
+    direction = state[1][0] 
+    curr_cart = state[2] is not None
 
-    data.append(trajectory)
+    x_index = int((x + 1) / granularity)
+    y_index = int((y + 1) / granularity)
 
-    # Write the updated data back to the file
-    with open(filename, "w") as file:
-        json.dump(data, file, indent=4)
+    state_int = x_index + y_index * 40 + direction * 1600 + curr_cart * 6400
+
+    return state_int
+
+first_traj = 
+
+def record_trajectory(state, action, filename="trajectories.txt"):
+
+    state_action_pair = (trans(state), action)
+
+    # Write to file, adding parentheses around the trajectory
+    if not os.path.exists(filename) or os.path.getsize(filename) == 0:
+        # Start a new trajectory if the file is empty or doesn't exist
+        with open(filename, "a") as file:
+            file.write("[" + str(state_action_pair))
+    else:
+        # Append to the existing trajectory
+        with open(filename, "a") as file:
+            file.write("," + str(state_action_pair))
+
+    # If the trajectory is done, close it with a parenthesis
+    if done:
+        with open(filename, "a") as file:
+            file.write(")\n")
 
 
 def is_single_player(command_):
