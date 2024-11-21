@@ -170,15 +170,15 @@ def trans(state, granularity=0.1):
 
     return state_int
 
-first_traj = 
+first_traj = True
 
 def record_trajectory(state, action, filename="trajectories.txt"):
 
     state_action_pair = (trans(state), action)
 
     # Write to file, adding parentheses around the trajectory
-    if not os.path.exists(filename) or os.path.getsize(filename) == 0:
-        # Start a new trajectory if the file is empty or doesn't exist
+    if first_traj:
+        first_traj = False
         with open(filename, "a") as file:
             file.write("[" + str(state_action_pair))
     else:
@@ -189,7 +189,7 @@ def record_trajectory(state, action, filename="trajectories.txt"):
     # If the trajectory is done, close it with a parenthesis
     if done:
         with open(filename, "a") as file:
-            file.write(")\n")
+            file.write("]\n")
 
 
 def is_single_player(command_):

@@ -25,11 +25,7 @@ def main():
     sock_game = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock_game.connect((HOST, PORT))
 
-    trajectories = [
-        {"state": "A", "action": "NORTH", "next_state": "B"},
-        {"state": "B", "action": "EAST", "next_state": "C"},
-        {"state": "C", "action": "INTERACT", "next_state": "D"},
-    ]
+ 
 
     agent = IRLAgent(trajectories)
 
