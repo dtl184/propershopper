@@ -9,6 +9,29 @@ def recv_socket_data(sock):
     data = sock.recv(4096).decode()  # Adjust buffer size if necessary
     return data
 
+def load_trajectories(file_name):
+    """
+    Reads trajectories from a text file and stores them as a list of lists.
+
+    Parameters:
+        file_name (str): The name of the file containing the trajectories.
+
+    Returns:
+        list: A list where each trajectory is a separate list of tuples.
+    """
+    trajectories = []
+
+    with open(file_name, "r") as file:
+        for line in file:
+            # Strip whitespace and newlines
+            line = line.strip()
+            if line:  # Ensure the line is not empty
+                # Evaluate the line as a Python list
+                trajectory = eval(line)
+                trajectories.append(trajectory)
+
+    return trajectories
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -25,9 +48,9 @@ def main():
     sock_game = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock_game.connect((HOST, PORT))
 
- 
+    trajectories = load_trajectories(trajectories.txt)
 
-    agent = IRLAgent(trajectories)
+    agent = IRLAgent(n_states=3344, trajectories=trajectories)
 
     sock_game.send(str.encode("0 RESET"))  
     state = recv_socket_data(sock_game)

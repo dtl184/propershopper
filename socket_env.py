@@ -13,6 +13,9 @@ import pygame
 
 ACTION_COMMANDS = ['NOP', 'NORTH', 'SOUTH', 'EAST', 'WEST', 'INTERACT', 'TOGGLE_CART', 'CANCEL', 'SELECT','RESET']
 
+
+
+
 def serialize_data(data):
     if isinstance(data, set):
         return list(data)
@@ -26,6 +29,7 @@ def serialize_data(data):
 class SupermarketEventHandler:
     def __init__(self, env, keyboard_input=False):
         self.env = env
+        self.first_traj = True
         self.keyboard_input = keyboard_input
         env.reset()
         self.curr_player = env.unwrapped.game.curr_player
@@ -40,6 +44,25 @@ class SupermarketEventHandler:
         else:
             self.handle_exploratory_events()
         self.env.render(mode='violations')
+    
+    def record_trajectory(self, state, action, filename="trajectories.txt"):
+
+        state_action_pair = (trans(state), action)
+
+        # Write to file, adding parentheses around the trajectory
+        if self.first_traj:
+            self.first_traj = False
+            with open(filename, "a") as file:
+                file.write("[" + str(state_action_pair))
+        else:
+            # Append to the existing trajectory
+            with open(filename, "a") as file:
+                file.write("," + str(state_action_pair))
+
+        # If the trajectory is done, close it with a parenthesis
+        if done:
+            with open(filename, "a") as file:
+                file.write("]\n")
     
 
 
@@ -90,16 +113,16 @@ class SupermarketEventHandler:
             keys = pygame.key.get_pressed()
             if keys[pygame.K_UP]:  # up
                 self.env.step(self.single_player_action(PlayerAction.NORTH))
-                record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=1)
+                self.record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=1)
             elif keys[pygame.K_DOWN]:  # down
                 self.env.step(self.single_player_action(PlayerAction.SOUTH))
-                record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=2)
+                self.record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=2)
             elif keys[pygame.K_LEFT]:  # left
                 self.env.step(self.single_player_action(PlayerAction.WEST))
-                record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=4)
+                self.record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=4)
             elif keys[pygame.K_RIGHT]:  # right
                 self.env.step(self.single_player_action(PlayerAction.EAST))
-                record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=3)
+                self.record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=3)
         self.running = self.env.unwrapped.game.running
 
     def handle_interactive_events(self):
@@ -159,7 +182,9 @@ def get_action_json(action, env_, obs, reward, done, info_=None, violations=''):
     return action_json
 
 def trans(state, granularity=0.1):
-    x, y = state[0]  
+    x, y = state[0] 
+    x = int(x)
+    y = int(y) 
     direction = state[1][0] 
     curr_cart = state[2] is not None
 
@@ -170,26 +195,8 @@ def trans(state, granularity=0.1):
 
     return state_int
 
-first_traj = True
 
-def record_trajectory(state, action, filename="trajectories.txt"):
 
-    state_action_pair = (trans(state), action)
-
-    # Write to file, adding parentheses around the trajectory
-    if first_traj:
-        first_traj = False
-        with open(filename, "a") as file:
-            file.write("[" + str(state_action_pair))
-    else:
-        # Append to the existing trajectory
-        with open(filename, "a") as file:
-            file.write("," + str(state_action_pair))
-
-    # If the trajectory is done, close it with a parenthesis
-    if done:
-        with open(filename, "a") as file:
-            file.write("]\n")
 
 
 def is_single_player(command_):

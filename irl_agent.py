@@ -21,15 +21,30 @@ import json
 from irl.maxent import irl, find_feature_expectations, find_expected_svf, find_policy  
 
 class IRLAgent:
-    def __init__(self, feature_matrix, action_space, transition_probability, discount=0.9, epochs=100, learning_rate=0.1):
-        self.feature_matrix = feature_matrix  
-        self.action_space = action_space      
-        self.transition_probability = transition_probability  
+    def __init__(self, n_states, trajectories, discount=0.9, epochs=100, learning_rate=0.1):
+        self.feature_matrix = self.generate_feature_matrix()
+        self.action_space = ['NOP', 'NORTH', 'SOUTH', 'EAST', 'WEST', 'INTERACT', 'TOGGLE_CART', 'CANCEL', 'SELECT','RESET']
+        self.n_states = n_states
+        self.trajectories = trajectories      
         self.discount = discount              
         self.epochs = epochs                  
         self.learning_rate = learning_rate    
         self.reward = None  # initially empty since we want to learn this                 
-        self.policy = None                    
+        self.policy = None
+
+    def feature_vector(self, i):
+
+        f = np.zeros(self.n_states)
+        f[i] = 1
+        return f
+
+    def feature_matrix(self):
+
+        features = []
+        for n in range(self.n_states):
+            f = self.feature_vector(n)
+            features.append(f)
+        return np.array(features)                    
     
     def learn_reward(self, trajectories):
         self.reward = irl(
