@@ -43,8 +43,8 @@ def optimal_value(n_states, n_actions, transition_probabilities, reward,
 
     n_states: Number of states. int.
     n_actions: Number of actions. int.
-    transition_probabilities: Function taking (state, action, state) to
-        transition probabilities.
+    transition_probabilities: Object supporting dynamic computation of
+        transition probabilities via indexing.
     reward: Vector of rewards for each state.
     discount: MDP discount factor. float.
     threshold: Convergence threshold, default 1e-2. float.
@@ -59,18 +59,21 @@ def optimal_value(n_states, n_actions, transition_probabilities, reward,
         for s in range(n_states):
             max_v = float("-inf")
             for a in range(n_actions):
-                tp = transition_probabilities[s, a, :]
-                max_v = max(max_v, np.dot(tp, reward + discount*v))
+                # Compute the dot product dynamically
+                q_value = 0
+                for k in range(n_states):
+                    q_value += transition_probabilities[s, a, k] * (reward[k] + discount * v[k])
+                max_v = max(max_v, q_value)
 
             new_diff = abs(v[s] - max_v)
-            if new_diff > diff:
-                diff = new_diff
+            diff = max(diff, new_diff)
             v[s] = max_v
 
     return v
 
+
 def find_policy(n_states, n_actions, transition_probabilities, reward, discount,
-                threshold=1e-2, v=None, stochastic=True):
+                threshold=1e-2, v=None, stochastic=False):
     """
     Find the optimal policy.
 
@@ -90,17 +93,6 @@ def find_policy(n_states, n_actions, transition_probabilities, reward, discount,
     if v is None:
         v = optimal_value(n_states, n_actions, transition_probabilities, reward,
                           discount, threshold)
-
-    if stochastic:
-        # Get Q using equation 9.2 from Ziebart's thesis.
-        Q = np.zeros((n_states, n_actions))
-        for i in range(n_states):
-            for j in range(n_actions):
-                p = transition_probabilities[i, j, :]
-                Q[i, j] = p.dot(reward + discount*v)
-        Q -= Q.max(axis=1).reshape((n_states, 1))  # For numerical stability.
-        Q = np.exp(Q)/np.exp(Q).sum(axis=1).reshape((n_states, 1))
-        return Q
 
     def _policy(s):
         return max(range(n_actions),

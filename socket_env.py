@@ -13,9 +13,6 @@ import pygame
 
 ACTION_COMMANDS = ['NOP', 'NORTH', 'SOUTH', 'EAST', 'WEST', 'INTERACT', 'TOGGLE_CART', 'CANCEL', 'SELECT','RESET']
 
-
-
-
 def serialize_data(data):
     if isinstance(data, set):
         return list(data)
@@ -29,7 +26,6 @@ def serialize_data(data):
 class SupermarketEventHandler:
     def __init__(self, env, keyboard_input=False):
         self.env = env
-        self.first_traj = True
         self.keyboard_input = keyboard_input
         env.reset()
         self.curr_player = env.unwrapped.game.curr_player
@@ -44,25 +40,6 @@ class SupermarketEventHandler:
         else:
             self.handle_exploratory_events()
         self.env.render(mode='violations')
-    
-    def record_trajectory(self, state, action, filename="trajectories.txt"):
-
-        state_action_pair = (trans(state), action)
-
-        # Write to file, adding parentheses around the trajectory
-        if self.first_traj:
-            self.first_traj = False
-            with open(filename, "a") as file:
-                file.write("[" + str(state_action_pair))
-        else:
-            # Append to the existing trajectory
-            with open(filename, "a") as file:
-                file.write("," + str(state_action_pair))
-
-        # If the trajectory is done, close it with a parenthesis
-        if done:
-            with open(filename, "a") as file:
-                file.write("]\n")
     
 
 
@@ -113,16 +90,17 @@ class SupermarketEventHandler:
             keys = pygame.key.get_pressed()
             if keys[pygame.K_UP]:  # up
                 self.env.step(self.single_player_action(PlayerAction.NORTH))
-                self.record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=1)
+                record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=1)
             elif keys[pygame.K_DOWN]:  # down
                 self.env.step(self.single_player_action(PlayerAction.SOUTH))
-                self.record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=2)
+                record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=2)
             elif keys[pygame.K_LEFT]:  # left
                 self.env.step(self.single_player_action(PlayerAction.WEST))
-                self.record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=4)
+                record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=4)
             elif keys[pygame.K_RIGHT]:  # right
                 self.env.step(self.single_player_action(PlayerAction.EAST))
-                self.record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=3)
+                record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=3)
+
         self.running = self.env.unwrapped.game.running
 
     def handle_interactive_events(self):
@@ -181,22 +159,32 @@ def get_action_json(action, env_, obs, reward, done, info_=None, violations=''):
     # action_json = {"hello": "world"}
     return action_json
 
-def trans(state, granularity=0.1):
-    x, y = state[0] 
-    x = int(x)
-    y = int(y) 
-    direction = state[1][0] 
-    curr_cart = state[2] is not None
+def trans(state):
 
-    x_index = int((x + 1) / granularity)
-    y_index = int((y + 1) / granularity)
+    x, y = state[0]
+    x_min, x_max = 1, 19  # Minimum x and y values
+    y_min, y_max = 2, 24  # Maximum x and y values
+    # granularity = 0.1  # Step size for precision
 
-    state_int = x_index + y_index * 40 + direction * 1600 + curr_cart * 6400
+    # # Compute the indices for x and y
+    # x_index = round((x - x_min) / granularity)
+    # y_index = round((y - y_min) / granularity)
 
-    return state_int
+    # # Total number of x values
+    # total_x_values = round((x_max - x_min) / granularity) + 1
+
+    # # Calculate the unique index
+    # return y_index * total_x_values + x_index
+
+    grid_width = x_max - x_min + 1
+    return (int(round(y)) - y_min) * grid_width + (int(round(x)) - x_min)
 
 
+def record_trajectory(state, action, filename="trajectories.txt"):
+    state_action_pair = (trans(state), action)
 
+    with open(filename, "a") as file:
+        file.write("," + str(state_action_pair))
 
 
 def is_single_player(command_):
