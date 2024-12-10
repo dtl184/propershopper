@@ -80,13 +80,13 @@ def main():
     with open("learned_reward.txt", "r") as file:
          agent.set_reward(np.array(eval(file.read())))
 
-    # agent.learn_reward()
+    agent.learn_reward()
 
-    # plt.subplot(1, 2, 2)
-    # plt.pcolor(agent.reward.reshape((19, 23)))
-    # plt.colorbar()
-    # plt.title("Recovered reward")
-    # plt.show()
+    plt.subplot(1, 2, 2)
+    plt.pcolor(agent.reward.reshape((19, 23)))
+    plt.colorbar()
+    plt.title("Recovered reward")
+    plt.show()
 
     HOST = '127.0.0.1'
     PORT = args.port
