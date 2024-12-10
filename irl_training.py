@@ -71,9 +71,9 @@ def main():
     )
     args = parser.parse_args()
 
-    #trajectories = load_trajectories('trajectories.txt')
+    trajectories = load_trajectories('trajectories.txt')
 
-    trajectories = pad_trajectories("trajectories.txt")
+   # trajectories = pad_trajectories("trajectories.txt")
 
     agent = IRLAgent(n_states=437, trajectories=trajectories)
 
