@@ -6,6 +6,8 @@ import numpy as np
 from utils import recv_socket_data
 import matplotlib.pyplot as plt
 
+from ltl_agent import LTLAgent
+
 
 def load_trajectories(file_name):
     """
@@ -75,18 +77,25 @@ def main():
 
    # trajectories = pad_trajectories("trajectories.txt")
 
-    agent = IRLAgent(n_states=437, trajectories=trajectories)
+    # agent = IRLAgent(n_states=437, trajectories=trajectories)
 
-    with open("learned_reward.txt", "r") as file:
-         agent.set_reward(np.array(eval(file.read())))
+    agent = LTLAgent(n_states=437)
 
-    agent.learn_reward()
+    agent.learn_from_trajectories(trajectories)
 
-    plt.subplot(1, 2, 2)
-    plt.pcolor(agent.reward.reshape((19, 23)))
-    plt.colorbar()
-    plt.title("Recovered reward")
-    plt.show()
+    agent.visualize()
+
+    # with open("learned_reward.txt", "r") as file:
+    #      agent.set_reward(np.array(eval(file.read())))
+
+    # agent.learn_reward()
+
+    # plt.subplot(1, 2, 2)
+    # plt.pcolor(agent.reward.reshape((19, 23)))
+    # plt.colorbar()
+    # plt.title("Recovered reward")
+    # plt.show()
+
 
     HOST = '127.0.0.1'
     PORT = args.port

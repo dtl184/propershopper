@@ -122,7 +122,7 @@ def find_expected_svf(n_states, r, n_actions, discount,
     """
 
     n_trajectories = len(trajectories)
-    trajectory_length = len(trajectories[0]) #TODO: deal with all trajectories having to be the same length
+    #trajectory_length = len(trajectories[0]) #TODO: deal with all trajectories having to be the same length
 
     # policy = find_policy(n_states, r, n_actions, discount,
     #                                 transition_probability)
@@ -130,16 +130,20 @@ def find_expected_svf(n_states, r, n_actions, discount,
                                          transition_probability, r, discount)
 
     start_state_count = np.zeros(n_states)
+
+    traj_lengths = []
     for trajectory in trajectories:
         start_state_count[trajectory[0][0]] += 1
+        traj_lengths.append(len(trajectory))
     p_start_state = start_state_count/n_trajectories
 
     expected_svf = np.tile(p_start_state, (trajectory_length, 1)).T
-    for t in range(1, trajectory_length):
-        expected_svf[:, t] = 0
-        for i, j, k in product(range(n_states), range(n_actions), range(n_states)):
-            expected_svf[k, t] += (expected_svf[i, t-1] *
-                                  transition_probability[i, j, k])
+    for trajectory_length in traj_lengths:
+        for t in range(1, trajectory_length):
+            expected_svf[:, t] = 0
+            for i, j, k in product(range(n_states), range(n_actions), range(n_states)):
+                expected_svf[k, t] += (expected_svf[i, t-1] *
+                                    transition_probability[i, j, k])
 
     return expected_svf.sum(axis=1)
 

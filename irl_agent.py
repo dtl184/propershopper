@@ -21,6 +21,14 @@ import json
 from irl.maxent import irl, find_feature_expectations, find_expected_svf, find_policy  
 
 class TransitionProbability:
+    """
+    The irl implementation requires a transition matrix for the environment. For each state,
+    we have to describe the probability of transitioning to every other state. In PS, an agent can only move 
+    1 unit NESW given that the resulting location is not blocked. 
+
+    The irl code simply gets a value from the matrix each iteration, e.g. transition[i, j, k]. This class
+    allows that call to be a call to self._getitem_ which dynamically computes if that transition is valid.
+    """
     def __init__(self, n_states, n_actions, x_min, x_max, y_min, y_max):
         self.n_states = n_states
         self.n_actions = n_actions
@@ -67,14 +75,14 @@ class TransitionProbability:
 
 
 class IRLAgent:
-    def __init__(self, n_states, trajectories, discount=0.9, epochs=100, learning_rate=0.5):
+    def __init__(self, n_states, trajectories, discount=0.9, epochs=100, learning_rate=0.1):
         self.action_space = ['NORTH', 'SOUTH', 'WEST', 'EAST']
         self.n_states = n_states
         self.feature_matrix = self.generate_feature_matrix()
         self.trajectories = trajectories
         self.transition_probability = self.generate_transition_matrix() #TransitionProbability(
-#     n_states=437,  # Example number of states for 0.1 precision
-#     n_actions=4,  # Number of actions
+#     n_states=437,  
+#     n_actions=4,  
 #     x_min=0.5,
 #     x_max=19,
 #     y_min=2.0,
@@ -88,6 +96,8 @@ class IRLAgent:
     
     def set_reward(self, r):
         self.reward = r
+
+
 
 
     def generate_transition_matrix(self):
