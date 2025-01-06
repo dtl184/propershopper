@@ -1,15 +1,17 @@
 import random
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+
 class LTLAgent:
     """
     An agent that learns from trajectory visitation frequencies. 
-    The agent identifies permitted and obligated states based on visitation counts.
+    The agent identifies permitted and obligated transitions from each state.
     
-    If a state is visited once in the trajectories, it is considered permitted.
-    If a state is visited more than once, it is considered obligated.
+    Transitions are obligated the first time they are seen. If a different transition from the same state is seen,
+    then that transition and all previously obligated transitions from that state are now permitted.
     """
-    def __init__(self, n_states):
+    def __init__(self, n_states, x_max=19, y_max=23):
         """
         Initializes the LTLAgent.
 
@@ -17,67 +19,22 @@ class LTLAgent:
         -----------
         n_states : int
             The total number of possible states.
+        x_max : int
+            The width of the grid (number of columns).
+        y_max : int
+            The height of the grid (number of rows).
         """
         self.n_states = n_states
-        self.action_space = ['NORTH', 'SOUTH', 'EAST', 'WEST']  # Possible actions as (dx, dy) tuples
-        self.state_visit_counts = np.zeros(n_states, dtype=int)  # Visitation counts for each state
-        self.permitted_states = set()  # States that are permitted
-        self.obligated_states = set()  # States that are obligated
+        self.action_space = ['NORTH', 'SOUTH', 'WEST', 'EAST']  # Possible actions as (dx, dy) tuples
+        self.transitions = {state: {'obligated': set(), 'permitted': set()} for state in range(n_states)}
         self.x_min = 1
-        self.x_max = 19
+        self.x_max = x_max
         self.y_min = 2
-        self.y_max = 24
-        self.goal_state = self.coords_to_state(3, 19)  # State corresponding to (3, 19)
+        self.y_max = y_max
     
-    def visualize(self):
-        """
-        Create a 2D grid visualization of the obligated and permitted states.
-        
-        Parameters:
-        -----------
-        obligated_states : set of int
-            Set of state indices that are obligated.
-        permitted_states : set of int
-            Set of state indices that are permitted.
-        
-        Returns:
-        --------
-        None
-        """
-        # Initialize the grid to white (0 = white, 0.5 = light gray, 1 = black)
-        grid = np.ones((self.y_max, self.x_max))  # Rows (y) x Columns (x)
-        
-        # Calculate the number of states per row
-        total_x_values = self.x_max
-        
-        # Set colors for obligated and permitted states
-        for state in self.obligated_states:
-            y_index = state // total_x_values
-            x_index = state % total_x_values
-            if 0 <= y_index < self.y_max and 0 <= x_index < self.x_max:
-                grid[y_index, x_index] = 0  # Dark (obligated) = black
-        
-        for state in self.permitted_states:
-            y_index = state // total_x_values
-            x_index = state % total_x_values
-            if 0 <= y_index < self.y_max and 0 <= x_index < self.x_max:
-                # Only update if not already an obligated state
-                if grid[y_index, x_index] != 0:
-                    grid[y_index, x_index] = 0.5  # Light (permitted) = light gray
-        
-        # Plot the grid
-        plt.figure(figsize=(10, 10))
-        plt.imshow(grid, cmap='gray', origin='upper')
-        plt.xticks(ticks=np.arange(-0.5, self.x_max, 1), labels=[])
-        plt.yticks(ticks=np.arange(-0.5, self.y_max, 1), labels=[])
-        plt.grid(color='black', linestyle='-', linewidth=1)
-        plt.title('Grid Showing Permitted and Obligated States')
-        plt.show()
-
-
     def learn_from_trajectories(self, trajectories):
         """
-        Processes the list of trajectories to determine which states are permitted and obligated.
+        Processes the list of trajectories to determine which transitions are permitted and obligated.
 
         Parameters:
         -----------
@@ -85,77 +42,25 @@ class LTLAgent:
             Each trajectory is a list of (state, action) pairs.
         """
         for trajectory in trajectories:
-            for state, _ in trajectory:
-                self.state_visit_counts[state] += 1
-
-        for state, count in enumerate(self.state_visit_counts):
-            if count == 1:
-                self.permitted_states.add(state)
-            elif count > 1:
-                self.obligated_states.add(state)
-
-    def choose_action(self, current_state):
-        """
-        Chooses the next action for the agent based on the current state.
-        
-        Parameters:
-        -----------
-        current_state : int
-            The current state index of the agent.
-
-        Returns:
-        --------
-        int
-            The action (1 to 4) corresponding to the chosen action.
-        """
-        current_x, current_y = current_state
-        act_dict = {'NORTH': 0, 'SOUTH': 1, 'EAST': 2, 'WEST': 3}
-        
-        obligated_actions = []
-        permitted_actions = []
-        action_to_state_map = {}
-
-        for action in self.action_space:
-            dx, dy = 0, 0
-            if action == 'NORTH':
-                dx, dy = 0, -1
-            elif action == 'SOUTH':
-                dx, dy = 0, 1
-            elif action == 'EAST':
-                dx, dy = 1, 0
-            elif action == 'WEST':
-                dx, dy = -1, 0
-            
-            next_x = current_x + dx
-            next_y = current_y + dy
-
-            if self.x_min <= next_x <= self.x_max and self.y_min <= next_y <= self.y_max:
-                next_state = self.coords_to_state(next_x, next_y)
-                action_to_state_map[action] = next_state
+            for i in range(len(trajectory) - 1):
+                state, action = trajectory[i]
+                next_state, _ = trajectory[i + 1]
                 
-                if next_state in self.obligated_states:
-                    obligated_actions.append((action, next_state))
-                elif next_state in self.permitted_states:
-                    permitted_actions.append((action, next_state))
-
-        # Priority 1: If there are obligated actions, choose the one closest to the goal
-        if obligated_actions:
-            min_distance = min(abs(next_state - self.goal_state) for _, next_state in obligated_actions)
-            best_actions = [action for action, next_state in obligated_actions if abs(next_state - self.goal_state) == min_distance]
-            chosen_action = random.choice(best_actions)
-            return act_dict[chosen_action]
-        
-        # Priority 2: If there are permitted actions, choose the one closest to the goal
-        if permitted_actions:
-            min_distance = min(abs(next_state - self.goal_state) for _, next_state in permitted_actions)
-            best_actions = [action for action, next_state in permitted_actions if abs(next_state - self.goal_state) == min_distance]
-            chosen_action = random.choice(best_actions)
-            return act_dict[chosen_action]
-        
-        # Priority 3: If no obligated or permitted actions are available, choose randomly from possible actions
-        random_action = random.choice(self.action_space)
-        return act_dict[random_action]
-
+                # If this is the first action seen from this state, mark it as obligated
+                if state not in self.transitions:
+                    self.transitions[state] = {'obligated': set(), 'permitted': set()}
+                    self.transitions[state]['obligated'].add(action)
+                
+                # If this state has only one action, it stays obligated
+                if len(self.transitions[state]['obligated']) == 1 and action not in self.transitions[state]['obligated']:
+                    self.transitions[state]['permitted'].update(self.transitions[state]['obligated'])
+                    self.transitions[state]['permitted'].add(action)
+                    self.transitions[state]['obligated'].clear()
+                
+                # If the action has not been seen before and it's the first action, keep it obligated
+                if action not in self.transitions[state]['obligated'] and action not in self.transitions[state]['permitted']:
+                    self.transitions[state]['obligated'].add(action)
+    
     def state_to_coords(self, state, granularity=1):
         """Convert a state index to (x, y) coordinates."""
         total_x_values = round((self.x_max - self.x_min) / granularity) + 1
@@ -171,3 +76,71 @@ class LTLAgent:
         x_index = round(x) - self.x_min
         y_index = round(y) - self.y_min
         return y_index * total_x_values + x_index
+    
+    def visualize(self):
+
+        fig, ax = plt.subplots(figsize=(10, 10))
+        
+        # Draw grid background
+        for y in range(self.y_max):
+            for x in range(self.x_max):
+                state = (self.y_max - 1 - y) * self.x_max + x  # Calculate the state index from (x, y) position (top-left origin)
+                if (x, y) == (2, 6):  # Color the specific square at (3, 19) yellow
+                    facecolor = 'yellow'
+                elif state in self.transitions and (self.transitions[state]['obligated'] or self.transitions[state]['permitted']):
+                    facecolor = 'white'  # White if the state has transitions
+                else:
+                    facecolor = 'black'  # Black if the state has no transitions
+                rect = patches.Rectangle((x, y), 1, 1, linewidth=1, edgecolor='black', facecolor=facecolor)
+                ax.add_patch(rect)
+        
+        total_x_values = self.x_max
+        action_directions = {'NORTH': (0, -0.6), 'SOUTH': (0, 0.6), 'EAST': (0.6, 0), 'WEST': (-0.6, 0)}  # Tail length increased
+        
+        # Add tiny arrows to the edge of white squares pointing to adjacent white squares based on actual transitions
+        edge_arrow_directions = {
+            'NORTH': (0, 0.45, 0, 0.3), 
+            'SOUTH': (0, -0.45, 0, -0.3), 
+            'EAST': (0.45, 0, 0.3, 0), 
+            'WEST': (-0.45, 0, -0.3, 0)
+        }
+        
+        edge_arrow_offsets = {
+            'NORTH': (0.1, 0),  # Small horizontal offset to avoid overlap
+            'SOUTH': (-0.1, 0),
+            'EAST': (0, 0.1),
+            'WEST': (0, -0.1)
+        }
+
+        direction_encoding = {
+            'NORTH': 1,  # Small horizontal offset to avoid overlap
+            'SOUTH': 2,
+            'EAST': 3,
+            'WEST': 4
+        }
+        
+        for y in range(self.y_max):
+            for x in range(self.x_max):
+                state = (self.y_max - 1 - y) * self.x_max + x
+                if state in self.transitions and (self.transitions[state]['obligated'] or self.transitions[state]['permitted']):
+                    center_x = x + 0.5
+                    center_y = y + 0.5
+                    
+                    for direction, (dx, dy, arrow_dx, arrow_dy) in edge_arrow_directions.items():
+                        if direction_encoding[direction] in self.transitions[state]['obligated']:
+                            color = 'black'  # Obligated transition
+                        elif direction_encoding[direction] in self.transitions[state]['permitted']:
+                            color = 'gray'  # Permitted transition
+                        else:
+                            continue
+                        
+                        offset_x, offset_y = edge_arrow_offsets[direction]
+                        ax.arrow(center_x + dx + offset_x, center_y + dy + offset_y, arrow_dx * 0.8, arrow_dy * 0.8, head_width=0.05, head_length=0.05, fc=color, ec=color)
+
+        plt.xlim(0, self.x_max)
+        plt.ylim(0, self.y_max)
+        plt.gca().set_aspect('equal', adjustable='box')
+        plt.xticks([])
+        plt.yticks([])
+        plt.title('Grid Showing Permitted and Obligated Transitions')
+        plt.show()
