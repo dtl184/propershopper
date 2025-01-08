@@ -94,12 +94,15 @@ if __name__ == "__main__":
     for target in target_list:
         agent_name = 'navigate ' + target 
         agent = BasketNaviAgent(action_space, agent_name) 
+        agent.qtable_norms = pd.read_json('json_files/qtable_norms.json')
+        agent.qtable_x = pd.read_json('json_files/qtable_x.json')
+        agent.qtable_y = pd.read_json('json_files/qtable_y.json')
         t = obj_pos_dict[target]
         training_time = 200
         episode_length = 1000
         for i in range(training_time):
-            global min_x
-            global min_y
+            # global min_x
+            # global min_y
             min_x = 1000
             min_y = 1000
             sock_game.send(str.encode("0 RESET"))  # reset the game

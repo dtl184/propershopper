@@ -8,6 +8,34 @@ import matplotlib.pyplot as plt
 
 from ltl_agent import LTLAgent
 
+def calculate_rewardnext_state, goal_x = None, goal_y = None, norms = None):
+
+    global min_x
+    global min_y
+
+    reward_x = -1
+    reward_y = -1
+    
+    if goal_x is not None:
+        dis_x = abs(next_state['observation']['players'][0]['position'][0] - goal_x)
+        dis_y = abs(next_state['observation']['players'][0]['position'][1] - goal_y)
+        if dis_x < min_x:
+            min_x = dis_x
+            reward_x = 10
+        if dis_y < min_y:
+            min_y = dis_y
+            reward_y = 10
+
+    if abs(current_state['observation']['players'][0]['position'][0] - goal_x) < 0.2 and abs(current_state['observation']['players'][0]['position'][1] - goal_y) < 0.2:
+        reward_x = 1000
+        reward_y = 1000
+        global reach_cnt
+        reach_cnt += 1
+        print("Goal reached:", reach_cnt)
+
+    return reward_x, reward_y, reward_norms
+
+
 
 def load_trajectories(file_name):
     """
@@ -32,34 +60,6 @@ def load_trajectories(file_name):
 
     return trajectories
 
-def pad_trajectories(file_path):
-    """
-    Reads trajectories from a text file, pads each trajectory to the length
-    of the longest trajectory by repeating the last element, and writes the
-    padded trajectories to a new file.
-
-    Parameters:
-        file_path (str): The path to the input file.
-        output_path (str): The path to save the output file.
-    """
-    with open(file_path, 'r') as file:
-        lines = file.readlines()
-
-    # Convert each line to a list of tuples
-    trajectories = [eval(line.strip()) for line in lines]
-
-    # Find the maximum length of trajectories
-    max_length = max(len(traj) for traj in trajectories)
-
-    # Pad each trajectory to the maximum length
-    padded_trajectories = []
-    for traj in trajectories:
-        if len(traj) < max_length:
-            last_element = traj[-1]
-            traj += [last_element] * (max_length - len(traj))
-        padded_trajectories.append(traj)
-
-    return padded_trajectories
 
 
 
@@ -75,20 +75,11 @@ def main():
 
     trajectories = load_trajectories('trajectories.txt')
 
-   # trajectories = pad_trajectories("trajectories.txt")
+    agent = LTLAgent(n_states=437)
 
-    agent = IRLAgent(n_states=437, trajectories=trajectories)
+    agent.learn_from_trajectories(trajectories)
 
-    with open("learned_reward.txt", "r") as file:
-         agent.set_reward(np.array(eval(file.read())))
-
-    agent.learn_reward()
-
-    plt.subplot(1, 2, 2)
-    plt.pcolor(agent.reward.reshape((19, 23)))
-    plt.colorbar()
-    plt.title("Recovered reward")
-    plt.show()
+    # agent.visualize()
 
 
     HOST = '127.0.0.1'
@@ -114,10 +105,8 @@ def main():
         next_state = recv_socket_data(sock_game)
         next_state = json.loads(next_state)
 
-        # Check if the basket is picked up (example condition)
-        # if "basket" in next_state.get("inventory", []):
-        #     print("Basket picked up! Task complete.")
-        #     done = True
+        # Calculate reward here
+        reward_x, reward_y = calculate_reward
 
         # Update the state
         state = next_state

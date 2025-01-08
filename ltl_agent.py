@@ -40,8 +40,6 @@ class LTLAgent:
                 state, action = trajectory[i]
                 next_state, _ = trajectory[i + 1]
                 
-                # Skip transitions that lead to black squares (no transitions or invalid states)
-
                 
                 # If this is the first action seen from this state, mark it as obligated
                 if state not in self.transitions:
@@ -188,21 +186,4 @@ class LTLAgent:
 
 
 
-    def visualize_2(self):
-        """
-        Display the map image (map.png) to the screen.
-
-        Returns:
-        --------
-        None
-        """
-
-
-        # Load the image
-        img = mpimg.imread("map.png")
-
-        # Display the image
-        plt.imshow(img)
-        plt.axis('off')  # Turn off axis labels for a clean display
-        plt.title("Map Image: map.png")
-        plt.show()
+    

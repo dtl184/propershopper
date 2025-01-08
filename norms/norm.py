@@ -69,11 +69,9 @@ class NormWrapper(gym.Wrapper):
             violations = temp
         return new_obs, reward, done, info, violations
 
-    def render(self, mode='rgb_array', **kwargs):
+    def render(self, mode='human', **kwargs):
         if not mode=='violations':
-            map = self.env.render(mode="rgb_array", **kwargs)
-            with open('map.txt', 'w') as filehandle:
-                json.dump(map.toList(), filehandle)
+            self.env.render(**kwargs)
         for violation in self.violations:
             print("NORM: " + str(violation))
         self.violations = set()

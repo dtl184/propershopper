@@ -5,6 +5,16 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Train_basket_navigation Debug",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/train_basket_navigation.py",
+            "console": "integratedTerminal",
+            "args": [
+                "-t 0"
+            ]
+        },
+        {
             "name": "Socket Env Keyboard Input Debug",
             "type": "debugpy",
             "request": "launch",
