@@ -3,7 +3,7 @@ import gymnasium as gym
 
 from enums.player_action import PlayerAction
 from env import SinglePlayerSupermarketEnv
-
+import json
 
 class NormViolation(ABC):
     def __init__(self):
@@ -69,9 +69,11 @@ class NormWrapper(gym.Wrapper):
             violations = temp
         return new_obs, reward, done, info, violations
 
-    def render(self, mode='human', **kwargs):
+    def render(self, mode='rgb_array', **kwargs):
         if not mode=='violations':
-            self.env.render(mode, **kwargs)
+            map = self.env.render(mode="rgb_array", **kwargs)
+            with open('map.txt', 'w') as filehandle:
+                json.dump(map.toList(), filehandle)
         for violation in self.violations:
             print("NORM: " + str(violation))
         self.violations = set()

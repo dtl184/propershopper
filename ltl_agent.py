@@ -2,6 +2,7 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+import matplotlib.image as mpimg
 
 class LTLAgent:
     """
@@ -33,18 +34,14 @@ class LTLAgent:
         self.y_max = y_max
     
     def learn_from_trajectories(self, trajectories):
-        """
-        Processes the list of trajectories to determine which transitions are permitted and obligated.
 
-        Parameters:
-        -----------
-        trajectories : list of list of tuples (state, action)
-            Each trajectory is a list of (state, action) pairs.
-        """
         for trajectory in trajectories:
             for i in range(len(trajectory) - 1):
                 state, action = trajectory[i]
                 next_state, _ = trajectory[i + 1]
+                
+                # Skip transitions that lead to black squares (no transitions or invalid states)
+
                 
                 # If this is the first action seen from this state, mark it as obligated
                 if state not in self.transitions:
@@ -78,64 +75,108 @@ class LTLAgent:
         return y_index * total_x_values + x_index
     
     def visualize(self):
+        """
+        Visualize the grid overlaid on the map.png image, accounting for pixel offsets.
+
+        Returns:
+        --------
+        None
+        """
+        import matplotlib.pyplot as plt
+        import matplotlib.image as mpimg
 
         fig, ax = plt.subplots(figsize=(10, 10))
-        
-        # Draw grid background
-        for y in range(self.y_max):
-            for x in range(self.x_max):
-                state = (self.y_max - 1 - y) * self.x_max + x  # Calculate the state index from (x, y) position (top-left origin)
-                if (x, y) == (2, 6):  # Color the specific square at (3, 19) yellow
-                    facecolor = 'yellow'
-                elif state in self.transitions and (self.transitions[state]['obligated'] or self.transitions[state]['permitted']):
-                    facecolor = 'white'  # White if the state has transitions
-                else:
-                    facecolor = 'black'  # Black if the state has no transitions
-                rect = patches.Rectangle((x, y), 1, 1, linewidth=1, edgecolor='black', facecolor=facecolor)
-                ax.add_patch(rect)
-        
-        total_x_values = self.x_max
-        action_directions = {'NORTH': (0, -0.6), 'SOUTH': (0, 0.6), 'EAST': (0.6, 0), 'WEST': (-0.6, 0)}  # Tail length increased
-        
-        # Add tiny arrows to the edge of white squares pointing to adjacent white squares based on actual transitions
+
+        # Load and display the background image
+        try:
+            img = mpimg.imread("map.png")
+            img_height, img_width, _ = img.shape
+            print(f"Image dimensions: {img_width}x{img_height}")
+
+            # Adjust grid extents based on image dimensions and pixel offsets
+            x_extent_start = 13 / img_width * self.x_max
+            x_extent_end = (img_width - 13) / img_width * self.x_max
+            y_extent_start = 52 / img_height * self.y_max
+            y_extent_end = (img_height - 13) / img_height * self.y_max
+
+            ax.imshow(img, extent=[0, self.x_max, 0, self.y_max], aspect='auto', zorder=0)
+        except FileNotFoundError:
+            print("Error: The file map.png was not found.")
+            return
+
+        # Calculate grid bounds within the described pixel offsets
+        grid_x_min = 13 / img_width * self.x_max
+        grid_x_max = (img_width - 13) / img_width * self.x_max
+        grid_y_min = 13 / img_height * self.y_max
+        grid_y_max = (img_height - 52) / img_height * self.y_max
+
+        basket_x, basket_y = 2, 7  # Coordinates for the basket square
+
+        # Draw grid lines within the bounds
+        for x in range(self.x_max + 1):
+            x_pos = grid_x_min + (x / self.x_max) * (grid_x_max - grid_x_min)
+            ax.axvline(x_pos, color='black', linewidth=0.5, zorder=1)
+        for y in range(self.y_max + 1):
+            y_pos = grid_y_min + (y / self.y_max) * (grid_y_max - grid_y_min)
+            ax.axhline(y_pos, color='black', linewidth=0.5, zorder=1)
+
+        # Tint the basket square yellow
+        basket_x_min = grid_x_min + (basket_x / self.x_max) * (grid_x_max - grid_x_min)
+        basket_x_max = grid_x_min + ((basket_x + 1) / self.x_max) * (grid_x_max - grid_x_min)
+        basket_y_min = grid_y_min + (basket_y / self.y_max) * (grid_y_max - grid_y_min)
+        basket_y_max = grid_y_min + ((basket_y + 1) / self.y_max) * (grid_y_max - grid_y_min)
+        ax.add_patch(
+            plt.Rectangle(
+                (basket_x_min, basket_y_min),
+                basket_x_max - basket_x_min,
+                basket_y_max - basket_y_min,
+                color='yellow',
+                alpha=0.5,
+                zorder=2
+            )
+        )
+
+        # Add arrows for transitions within the grid bounds
         edge_arrow_directions = {
-            'NORTH': (0, 0.45, 0, 0.3), 
-            'SOUTH': (0, -0.45, 0, -0.3), 
-            'EAST': (0.45, 0, 0.3, 0), 
+            'NORTH': (0, 0.45, 0, 0.3),
+            'SOUTH': (0, -0.45, 0, -0.3),
+            'EAST': (0.45, 0, 0.3, 0),
             'WEST': (-0.45, 0, -0.3, 0)
         }
-        
-        edge_arrow_offsets = {
-            'NORTH': (0.1, 0),  # Small horizontal offset to avoid overlap
-            'SOUTH': (-0.1, 0),
-            'EAST': (0, 0.1),
-            'WEST': (0, -0.1)
-        }
+        edge_arrow_offsets = {'NORTH': (0.1, 0), 'SOUTH': (-0.1, 0), 'EAST': (0, 0.1), 'WEST': (0, -0.1)}
+        direction_encoding = {'NORTH': 1, 'SOUTH': 2, 'EAST': 3, 'WEST': 4}
 
-        direction_encoding = {
-            'NORTH': 1,  # Small horizontal offset to avoid overlap
-            'SOUTH': 2,
-            'EAST': 3,
-            'WEST': 4
-        }
-        
         for y in range(self.y_max):
             for x in range(self.x_max):
                 state = (self.y_max - 1 - y) * self.x_max + x
                 if state in self.transitions and (self.transitions[state]['obligated'] or self.transitions[state]['permitted']):
-                    center_x = x + 0.5
-                    center_y = y + 0.5
-                    
+                    center_x = grid_x_min + (x + 0.5) / self.x_max * (grid_x_max - grid_x_min)
+                    center_y = grid_y_min + (y + 0.5) / self.y_max * (grid_y_max - grid_y_min)
                     for direction, (dx, dy, arrow_dx, arrow_dy) in edge_arrow_directions.items():
+                        neighbor_x = x + (1 if direction == 'EAST' else -1 if direction == 'WEST' else 0)
+                        neighbor_y = y + (1 if direction == 'SOUTH' else -1 if direction == 'NORTH' else 0)
+                        neighbor_state = (self.y_max - 1 - neighbor_y) * self.x_max + neighbor_x
+
+                        # Skip arrows leading to invalid states
+                        if neighbor_x < 0 or neighbor_x >= self.x_max or neighbor_y < 0 or neighbor_y >= self.y_max:
+                            continue
+                        if neighbor_state not in self.transitions or (
+                            not self.transitions[neighbor_state]['obligated'] and not self.transitions[neighbor_state]['permitted']):
+                            continue
+
                         if direction_encoding[direction] in self.transitions[state]['obligated']:
-                            color = 'black'  # Obligated transition
+                            color = 'black'
                         elif direction_encoding[direction] in self.transitions[state]['permitted']:
-                            color = 'gray'  # Permitted transition
+                            color = 'gray'
                         else:
                             continue
-                        
+
                         offset_x, offset_y = edge_arrow_offsets[direction]
-                        ax.arrow(center_x + dx + offset_x, center_y + dy + offset_y, arrow_dx * 0.8, arrow_dy * 0.8, head_width=0.05, head_length=0.05, fc=color, ec=color)
+                        ax.arrow(center_x + dx * (grid_x_max - grid_x_min) / self.x_max + offset_x,
+                                 center_y + dy * (grid_y_max - grid_y_min) / self.y_max + offset_y,
+                                 arrow_dx * (grid_x_max - grid_x_min) / self.x_max * 0.8,
+                                 arrow_dy * (grid_y_max - grid_y_min) / self.y_max * 0.8,
+                                 head_width=0.05, head_length=0.05, fc=color, ec=color, zorder=3)
 
         plt.xlim(0, self.x_max)
         plt.ylim(0, self.y_max)
@@ -143,4 +184,25 @@ class LTLAgent:
         plt.xticks([])
         plt.yticks([])
         plt.title('Grid Showing Permitted and Obligated Transitions')
+        plt.show()
+
+
+
+    def visualize_2(self):
+        """
+        Display the map image (map.png) to the screen.
+
+        Returns:
+        --------
+        None
+        """
+
+
+        # Load the image
+        img = mpimg.imread("map.png")
+
+        # Display the image
+        plt.imshow(img)
+        plt.axis('off')  # Turn off axis labels for a clean display
+        plt.title("Map Image: map.png")
         plt.show()

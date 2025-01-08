@@ -1,6 +1,7 @@
 import time
 
 import gymnasium as gym
+import json
 from enums.player_action import PlayerAction
 from game import Game
 
@@ -21,7 +22,6 @@ class SupermarketEnv(gym.Env):
         self.render_number = render_number
         self.bagging = bagging
         self.save_video = save_video
-
         self.follow_player = follow_player
 
         self.unwrapped.num_players = num_players
@@ -147,3 +147,6 @@ if __name__ == "__main__":
     for i in range(100):
         env.step((PlayerAction.EAST, PlayerAction.SOUTH))
         env.render()
+        # map = env.render(mode='rgb_array')
+        # with open('map.txt', 'w') as filehandle:
+        #     json.dump(map.toList(), filehandle)

@@ -183,8 +183,8 @@ def trans(state):
 def record_trajectory(state, action, filename="trajectories.txt"):
     state_action_pair = (trans(state), action)
 
-    with open(filename, "a") as file:
-        file.write("," + str(state_action_pair))
+   # with open(filename, "a") as file:
+        #file.write("," + str(state_action_pair))
 
 
 def is_single_player(command_):
