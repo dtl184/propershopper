@@ -3,6 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import matplotlib.image as mpimg
+import pandas as pd 
+import json
 
 class LTLAgent:
     """
@@ -12,7 +14,7 @@ class LTLAgent:
     Transitions are obligated the first time they are seen. If a different transition from the same state is seen,
     then that transition and all previously obligated transitions from that state are now permitted.
     """
-    def __init__(self, n_states, x_max=19, y_max=23):
+    def __init__(self, n_states, goal, gamma=0.9, epsilon=0.3, mini_epsilon=0.1, decay=0.9999, x_max=19, y_max=23):
         """
         Initializes the LTLAgent.
 
@@ -26,19 +28,34 @@ class LTLAgent:
             The height of the grid (number of rows).
         """
         self.n_states = n_states
-        self.action_space = ['NORTH', 'SOUTH', 'WEST', 'EAST']  # Possible actions as (dx, dy) tuples
+        self.goal = goal
+        self.gamma = gamma
+        self.epsilon = epsilon
+        self.mini_epsilon = mini_epsilon
+        self.decay = decay
+        self.action_space = ['NORTH', 'SOUTH', 'WEST', 'EAST']  
         self.transitions = {state: {'obligated': set(), 'permitted': set()} for state in range(n_states)}
+        self.qtable = pd.DataFrame(columns=[i for i in range(self.action_space)])
         self.x_min = 1
         self.x_max = x_max
         self.y_min = 2
         self.y_max = y_max
     
-    def learn_from_trajectories(self, trajectories):
 
+    def learn_from_trajectories(self, trajectories):
+        """
+        Determines what states are obligated/permitted based on agent trajectories.
+        If a state only has one transition out, that transition is obligated. If a state
+        has multiple transitions out, all those transitions are permitted. 
+
+        Args:
+            trajectories:
+                A list of agent trajectories, each of which is a list of (state, action) tuples
+        
+        """
         for trajectory in trajectories:
             for i in range(len(trajectory) - 1):
                 state, action = trajectory[i]
-                next_state, _ = trajectory[i + 1]
                 
                 
                 # If this is the first action seen from this state, mark it as obligated
@@ -55,6 +72,63 @@ class LTLAgent:
                 # If the action has not been seen before and it's the first action, keep it obligated
                 if action not in self.transitions[state]['obligated'] and action not in self.transitions[state]['permitted']:
                     self.transitions[state]['obligated'].add(action)
+    
+    def trans(self, state):
+        """
+        Extracts relevant state variables from the current state for learning.
+        For the LTL agent's current task that is simply its position.
+        """
+
+        # round the position to the nearest int (for simplicity)
+        x = int(round(state['observation']['players'][0]['position'][0]))
+        y = int(round(state['observation']['players'][0]['position'][1]))
+        position = (x, y)
+
+        return json.dumps({'position': position}, sort_keys=True)
+    
+    def check_add(self, state):
+
+        serialized_state = self.trans(state)
+        if serialized_state not in self.qtable.index:
+            self.qtable_norms.loc[serialized_state] = pd.Series(np.zeros(self.action_space), index=[i for i in range(self.action_space)])
+    
+    
+    def learning(self, action, state, next_state, reward):
+        """
+        Updates qtable after agent receives a reward
+
+        Args:
+            action: 
+                Agent's current action
+            state: 
+                Current agent state
+            next_state:
+                State obtained after applying action in current state
+            reward:
+                Agent's reward after performing action
+        """
+
+        self.check_add(state)
+        self.check_add(next_state)
+
+
+        if reward != 0:
+            
+            q_sa = self.qtable.loc[self.trans(state), action]
+            max_next_q_sa = self.qtable.loc[self.trans(next_state), :].max()
+            new_q_sa = q_sa + self.alpha * (reward + self.gamma * max_next_q_sa - q_sa)
+            self.qtable.loc[self.trans(state), action] = new_q_sa
+    
+    def choose_action(self, state):
+        p = np.random.uniform(0, 1)
+        if self.epsilon >= self.mini_epsilon:
+            self.epsilon *= self.decay
+        if p <= self.epsilon:
+            return np.random.choice([i for i in range(self.action_space)])
+        else:
+            q_values = self.qtable_norms.loc[self.trans(state)].to_list()
+
+        
     
     def state_to_coords(self, state, granularity=1):
         """Convert a state index to (x, y) coordinates."""
