@@ -8,32 +8,33 @@ import matplotlib.pyplot as plt
 
 from ltl_agent import LTLAgent
 
-def calculate_rewardnext_state, goal_x = None, goal_y = None, norms = None):
+def calculate_reward(next_state, goal=None):
+    global min_distance  # Track the minimum distance to the goal
+    global reach_cnt  # Count how many times the goal is reached
 
-    global min_x
-    global min_y
-
-    reward_x = -1
-    reward_y = -1
+    # Default reward
+    reward = -1
     
-    if goal_x is not None:
-        dis_x = abs(next_state['observation']['players'][0]['position'][0] - goal_x)
-        dis_y = abs(next_state['observation']['players'][0]['position'][1] - goal_y)
-        if dis_x < min_x:
-            min_x = dis_x
-            reward_x = 10
-        if dis_y < min_y:
-            min_y = dis_y
-            reward_y = 10
+    if goal is not None:
+        
+        agent_position = next_state['observation']['players'][0]['position']
+        
+        # calculate the agent's distance to the goal from the next state
+        distance = ((agent_position[0] - goal[0]) ** 2 + (agent_position[1] - goal[1]) ** 2) ** 0.5
+        
+        # reward the agent more the closer it gets to the goal
+        if distance < min_distance:
+            min_distance = distance
+            reward = 10
+        
+        # Check if the goal has been reached
+        if distance < 0.2:  # Tolerance for reaching the goal
+            reward = 1000
+            reach_cnt += 1
+            print("Goal reached:", reach_cnt)
 
-    if abs(current_state['observation']['players'][0]['position'][0] - goal_x) < 0.2 and abs(current_state['observation']['players'][0]['position'][1] - goal_y) < 0.2:
-        reward_x = 1000
-        reward_y = 1000
-        global reach_cnt
-        reach_cnt += 1
-        print("Goal reached:", reach_cnt)
+    return reward
 
-    return reward_x, reward_y, reward_norms
 
 
 
@@ -75,11 +76,10 @@ def main():
 
     trajectories = load_trajectories('trajectories.txt')
 
-    agent = LTLAgent(n_states=437)
-
+    agent = LTLAgent(n_states=437, goal=(3.5, 17.0))
     agent.learn_from_trajectories(trajectories)
 
-    # agent.visualize()
+    agent.visualize()
 
 
     HOST = '127.0.0.1'
@@ -106,7 +106,7 @@ def main():
         next_state = json.loads(next_state)
 
         # Calculate reward here
-        reward_x, reward_y = calculate_reward
+        reward = calculate_reward(next_state, goal)
 
         # Update the state
         state = next_state

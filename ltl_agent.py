@@ -35,7 +35,7 @@ class LTLAgent:
         self.decay = decay
         self.action_space = ['NORTH', 'SOUTH', 'WEST', 'EAST']  
         self.transitions = {state: {'obligated': set(), 'permitted': set()} for state in range(n_states)}
-        self.qtable = pd.DataFrame(columns=[i for i in range(self.action_space)])
+        self.qtable = None# pd.DataFrame(columns=[i for i in range(self.action_space)])
         self.x_min = 1
         self.x_max = x_max
         self.y_min = 2
@@ -197,16 +197,16 @@ class LTLAgent:
         basket_x_max = grid_x_min + ((basket_x + 1) / self.x_max) * (grid_x_max - grid_x_min)
         basket_y_min = grid_y_min + (basket_y / self.y_max) * (grid_y_max - grid_y_min)
         basket_y_max = grid_y_min + ((basket_y + 1) / self.y_max) * (grid_y_max - grid_y_min)
-        ax.add_patch(
-            plt.Rectangle(
-                (basket_x_min, basket_y_min),
-                basket_x_max - basket_x_min,
-                basket_y_max - basket_y_min,
-                color='yellow',
-                alpha=0.5,
-                zorder=2
-            )
-        )
+        #ax.add_patch(
+        #     plt.Rectangle(
+        #         (basket_x_min, basket_y_min),
+        #         basket_x_max - basket_x_min,
+        #         basket_y_max - basket_y_min,
+        #         color='yellow',
+        #         alpha=0.5,
+        #         zorder=2
+        #     )
+        # )
 
         # Add arrows for transitions within the grid bounds
         edge_arrow_directions = {
