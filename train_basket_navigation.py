@@ -19,7 +19,7 @@ global min_x
 global min_y 
 cart = False
 
-target_list = [[10, 18.5], [5.5, 1.5], [9.5, 1.5]]
+target_list = [[3, 18], [3, 18], [3, 18]]
 
 def euclidean_distance(pos1, pos2):
     # Calculate Euclidean distance between two points

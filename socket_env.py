@@ -90,16 +90,20 @@ class SupermarketEventHandler:
             keys = pygame.key.get_pressed()
             if keys[pygame.K_UP]:  # up
                 self.env.step(self.single_player_action(PlayerAction.NORTH))
-                record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=1)
+                record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=0)
             elif keys[pygame.K_DOWN]:  # down
                 self.env.step(self.single_player_action(PlayerAction.SOUTH))
-                record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=2)
+                record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=1)
             elif keys[pygame.K_LEFT]:  # left
                 self.env.step(self.single_player_action(PlayerAction.WEST))
-                record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=4)
+                record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=3)
             elif keys[pygame.K_RIGHT]:  # right
                 self.env.step(self.single_player_action(PlayerAction.EAST))
-                record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=3)
+                record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=2)
+            elif keys[pygame.K_z]:
+                record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=0, first=True)
+            elif keys[pygame.K_x]:
+                record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=0, last=True)
 
         self.running = self.env.unwrapped.game.running
 
@@ -164,27 +168,46 @@ def trans(state):
     x, y = state[0]
     x_min, x_max = 1, 19  # Minimum x and y values
     y_min, y_max = 2, 24  # Maximum x and y values
-    # granularity = 0.1  # Step size for precision
-
-    # # Compute the indices for x and y
-    # x_index = round((x - x_min) / granularity)
-    # y_index = round((y - y_min) / granularity)
-
-    # # Total number of x values
-    # total_x_values = round((x_max - x_min) / granularity) + 1
-
-    # # Calculate the unique index
-    # return y_index * total_x_values + x_index
-
-    grid_width = x_max - x_min + 1
-    return (int(round(y)) - y_min) * grid_width + (int(round(x)) - x_min)
 
 
-def record_trajectory(state, action, filename="trajectories.txt"):
+    total_x_values = x_max - x_min + 1
+    x_index = int(round(x) - x_min)
+    y_index = int(round(y) - y_min)
+    return y_index * total_x_values + x_index
+
+
+
+
+first_written = False
+last_written = False
+first_pair = False
+
+
+def record_trajectory(state, action, filename="trajectories.txt", first=False, last=False):
+    global first_written, last_written, first_pair
+
     state_action_pair = (trans(state), action)
 
-   # with open(filename, "a") as file:
-        #file.write("," + str(state_action_pair))
+    with open(filename, "a") as file:
+        if first and not first_written:
+            file.write("[")
+            first_written = True
+            return
+        if last and not last_written:
+            file.write("]\n")
+            last_written = True
+            sock_agent.close()
+            return
+        if first and first_written:
+            return
+        if last and last_written:
+            return
+        if not first_pair:
+            file.write(str(state_action_pair))
+            first_pair = True
+        else:
+            file.write("," + str(state_action_pair))
+
 
 
 def is_single_player(command_):

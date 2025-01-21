@@ -1,0 +1,162 @@
+import argparse
+import socket
+import json
+import numpy as np
+import pandas as pd
+from base_agent import BaseAgent
+from utils import recv_socket_data
+import matplotlib.pyplot as plt
+
+
+def calculate_reward(state, next_state, goal=None):
+    """
+    Calculate reward based on the distance to the goal.
+    """
+ 
+    global min_distance  # Track the minimum distance to the goal
+    # Default reward
+    reward = -1
+
+    min_distance = 100 # start with large val
+
+    reached = False
+    
+    if goal is not None:
+        curr_position = state['observation']['players'][0]['position']
+        next_position = next_state['observation']['players'][0]['position']
+        
+        # calculate the agent's distance to the goal from the next state
+        curr_distance = ((curr_position[0] - goal[0]) ** 2 + (curr_position[1] - goal[1]) ** 2) ** 0.5
+        next_distance = ((next_position[0] - goal[0]) ** 2 + (next_position[1] - goal[1]) ** 2) ** 0.5
+        #print(f'distance to goal: {distance}\n')
+        
+        # reward the agent more the closer it gets to the goal
+        
+        # Check if the goal has been reached
+        if curr_distance < 1:  # Tolerance for reaching the goal
+            reward = 1000
+            reached = True
+            print("Goal reached!")
+        else:
+            reward = (next_distance - curr_distance) * 5 - 0.05 #action cost
+            
+
+    return reached, reward
+
+
+def save_cumulative_rewards(cumulative_rewards, filename="new_cum.csv"):
+    """
+    Save cumulative rewards to a CSV file.
+    """
+    try:
+        existing_rewards = pd.read_csv(filename)
+    except (FileNotFoundError, pd.errors.EmptyDataError):
+        existing_rewards = pd.DataFrame(columns=["Episode", "Cumulative Reward"])
+
+    new_rewards = pd.DataFrame({
+        "Episode": range(len(existing_rewards) + 1, len(existing_rewards) + len(cumulative_rewards) + 1),
+        "Cumulative Reward": cumulative_rewards,
+    })
+
+    updated_rewards = pd.concat([existing_rewards, new_rewards], ignore_index=True)
+    updated_rewards.to_csv(filename, index=False)
+
+
+def plot_cumulative_rewards(filename="new_cum.csv"):
+    """
+    Plot cumulative rewards from the CSV file.
+    """
+    rewards_df = pd.read_csv(filename)
+    plt.figure(figsize=(10, 6))
+    plt.plot(rewards_df["Episode"], rewards_df["Cumulative Reward"], label="Cumulative Reward per Episode")
+    plt.xlabel("Episode")
+    plt.ylabel("Cumulative Reward")
+    plt.title("Cumulative Reward Over Training Episodes")
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--port", type=int, default=9000, help="Port to connect to the environment")
+    parser.add_argument("--training_time", type=int, default=2000, help="Number of training episodes")
+    parser.add_argument("--episode_length", type=int, default=500, help="Maximum steps per episode")
+    args = parser.parse_args()
+
+    agent = BaseAgent(goal = (3, 18))
+    
+
+    HOST = '127.0.0.1'
+    PORT = args.port
+    sock_game = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock_game.connect((HOST, PORT))
+
+    cumulative_rewards = []
+    history = []
+    for i in range(1, args.training_time + 1):
+        print(f"Starting episode {i}")
+
+        sock_game.send(str.encode("0 RESET"))
+        state = recv_socket_data(sock_game)
+        state = json.loads(state)
+
+        cnt = 0
+        cur_ep_return = 0
+
+        while not state['gameOver']:
+            cnt += 1
+
+            action = agent.choose_action(state)
+            action_cmd = f"0 {action}"
+            sock_game.send(str.encode(action_cmd))
+
+            next_state = recv_socket_data(sock_game)
+            next_state = json.loads(next_state)
+
+            if next_state == None:
+                normalized_reward = cur_ep_return / cnt if cnt > 0 else 0
+                cumulative_rewards.append(normalized_reward)
+                history.append(0)
+                break
+            
+
+            goal_reached, reward = calculate_reward(next_state, agent.goal)
+            cur_ep_return += reward
+
+            agent.learning(state, action, reward, next_state)
+            state = next_state
+
+            if cnt > 500:
+                history.append(0)
+                normalized_reward = cur_ep_return / cnt if cnt > 0 else 0
+                cumulative_rewards.append(normalized_reward)
+                break
+
+            if goal_reached:  # Success condition
+                history.append(1)
+                normalized_reward = cur_ep_return / cnt if cnt > 0 else 0
+                cumulative_rewards.append(normalized_reward)
+                break
+
+            if next_state["gameOver"]:
+                break
+
+        cumulative_rewards.append(cur_ep_return)
+        print(f"Episode {i} Reward: {cur_ep_return}")
+
+        if i % 100 == 0:
+            print(f"Saving Q-table and rewards at episode {i}")
+            agent.save_qtable()
+            save_cumulative_rewards(cumulative_rewards)
+            cumulative_rewards = []
+
+
+    sock_game.close()
+    agent.save_qtable()
+    save_cumulative_rewards(cumulative_rewards)
+    plot_cumulative_rewards()
+
+
+if __name__ == "__main__":
+    main()

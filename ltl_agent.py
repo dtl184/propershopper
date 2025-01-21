@@ -14,7 +14,7 @@ class LTLAgent:
     Transitions are obligated the first time they are seen. If a different transition from the same state is seen,
     then that transition and all previously obligated transitions from that state are now permitted.
     """
-    def __init__(self, n_states, goal, gamma=0.9, epsilon=0.3, mini_epsilon=0.1, decay=0.9999, x_max=19, y_max=23):
+    def __init__(self, n_states, goal, alpha=0.5, gamma=0.9, epsilon=0.8, mini_epsilon=0.05, decay=0.9999, x_max=19, y_max=24):
         """
         Initializes the LTLAgent.
 
@@ -29,106 +29,167 @@ class LTLAgent:
         """
         self.n_states = n_states
         self.goal = goal
+        self.alpha = alpha
         self.gamma = gamma
         self.epsilon = epsilon
         self.mini_epsilon = mini_epsilon
         self.decay = decay
-        self.action_space = ['NORTH', 'SOUTH', 'WEST', 'EAST']  
-        self.transitions = {state: {'obligated': set(), 'permitted': set()} for state in range(n_states)}
-        self.qtable = None# pd.DataFrame(columns=[i for i in range(self.action_space)])
+        self.action_space = ['NORTH', 'SOUTH', 'EAST', 'WEST']  
+        self.qtable = pd.DataFrame(columns=[i for i in range(len(self.action_space))])
+        self.transitions = {state: (tuple(), tuple()) for state in range(n_states)}
         self.x_min = 1
         self.x_max = x_max
         self.y_min = 2
         self.y_max = y_max
-    
-
-    def learn_from_trajectories(self, trajectories):
-        """
-        Determines what states are obligated/permitted based on agent trajectories.
-        If a state only has one transition out, that transition is obligated. If a state
-        has multiple transitions out, all those transitions are permitted. 
-
-        Args:
-            trajectories:
-                A list of agent trajectories, each of which is a list of (state, action) tuples
-        
-        """
-        for trajectory in trajectories:
-            for i in range(len(trajectory) - 1):
-                state, action = trajectory[i]
-                
-                
-                # If this is the first action seen from this state, mark it as obligated
-                if state not in self.transitions:
-                    self.transitions[state] = {'obligated': set(), 'permitted': set()}
-                    self.transitions[state]['obligated'].add(action)
-                
-                # If this state has only one action, it stays obligated
-                if len(self.transitions[state]['obligated']) == 1 and action not in self.transitions[state]['obligated']:
-                    self.transitions[state]['permitted'].update(self.transitions[state]['obligated'])
-                    self.transitions[state]['permitted'].add(action)
-                    self.transitions[state]['obligated'].clear()
-                
-                # If the action has not been seen before and it's the first action, keep it obligated
-                if action not in self.transitions[state]['obligated'] and action not in self.transitions[state]['permitted']:
-                    self.transitions[state]['obligated'].add(action)
     
     def trans(self, state):
         """
         Extracts relevant state variables from the current state for learning.
         For the LTL agent's current task that is simply its position.
         """
-
-        # round the position to the nearest int (for simplicity)
         x = int(round(state['observation']['players'][0]['position'][0]))
         y = int(round(state['observation']['players'][0]['position'][1]))
         position = (x, y)
-
         return json.dumps({'position': position}, sort_keys=True)
-    
+
+
+
     def check_add(self, state):
+        """
+        Ensures the state is in the Q-table, adding it if not present and it's not an obligated state.
+
+        Args:
+            state (dict): The state to check and potentially add to the Q-table.
+        """
+        x = int(round(state['observation']['players'][0]['position'][0]))
+        y = int(round(state['observation']['players'][0]['position'][1]))
+
+        state_index = self.coords_to_state(x, y)
+
+        if state_index == -1:
+            return
+
+        # If state is obligated no need to add to q table
+        if len(self.transitions[state_index][0]) > 0:  
+            return
 
         serialized_state = self.trans(state)
         if serialized_state not in self.qtable.index:
-            self.qtable_norms.loc[serialized_state] = pd.Series(np.zeros(self.action_space), index=[i for i in range(self.action_space)])
+            self.qtable.loc[serialized_state] = pd.Series(np.zeros(len(self.action_space)), index=[i for i in range(len(self.action_space))])
+    
+
+    def learn_from_trajectories(self, trajectories):
+        """
+        Determines what states are obligated/permitted based on agent trajectories.
+
+        Args:
+            trajectories: A list of agent trajectories, each of which is a list of (state, action) tuples.
+        """
+        for trajectory in trajectories:
+            for i in range(len(trajectory) - 1):
+                state_index, action = trajectory[i]
+
+
+                # Get current obligated and permitted transitions
+                obligated, permitted = self.transitions[state_index]
+
+                # If a new action is observed, update transitions
+                if action not in obligated and action not in permitted:
+                    if len(obligated) == 0 and len(permitted) == 0:
+                        # No obligated transitions, make this action obligated
+                        self.transitions[state_index] = ((action,), permitted)
+                    else:
+                        # Move all obligated to permitted and add the new action
+                        self.transitions[state_index] = (tuple(), obligated + permitted + (action,))
     
     
     def learning(self, action, state, next_state, reward):
         """
-        Updates qtable after agent receives a reward
+        Updates Q-table after the agent receives a reward, but only for permitted transitions.
 
         Args:
-            action: 
-                Agent's current action
-            state: 
-                Current agent state
-            next_state:
-                State obtained after applying action in current state
-            reward:
-                Agent's reward after performing action
+            action: The agent's current action.
+            state: The current agent state.
+            next_state: The state obtained after applying the action in the current state.
+            reward: The reward received after performing the action.
         """
-
         self.check_add(state)
         self.check_add(next_state)
+        x = int(round(state['observation']['players'][0]['position'][0]))
+        y = int(round(state['observation']['players'][0]['position'][1]))
+        state_index = self.coords_to_state(x, y)
 
+        _, permitted = self.transitions[state_index]
+        if action not in permitted:
+            # Do not update if the action is not permitted
+            return
 
-        if reward != 0:
-            
-            q_sa = self.qtable.loc[self.trans(state), action]
+        q_sa = self.qtable.loc[self.trans(state), action]
+
+        # Handle obligated states
+        x_next = int(round(next_state['observation']['players'][0]['position'][0]))
+        y_next = int(round(next_state['observation']['players'][0]['position'][1]))
+        next_state_index = self.coords_to_state(x_next, y_next)
+        
+        if len(self.transitions[next_state_index][0]) == 1:  # Check if obligated
+            # If next_state is obligated, ignore max_next_q_sa
+            new_q_sa = q_sa + self.alpha * (reward - q_sa)
+        else:
+            # Standard Q-learning update for non-obligated states
             max_next_q_sa = self.qtable.loc[self.trans(next_state), :].max()
             new_q_sa = q_sa + self.alpha * (reward + self.gamma * max_next_q_sa - q_sa)
-            self.qtable.loc[self.trans(state), action] = new_q_sa
+
+        self.qtable.loc[self.trans(state), action] = new_q_sa
+
     
     def choose_action(self, state):
-        p = np.random.uniform(0, 1)
-        if self.epsilon >= self.mini_epsilon:
-            self.epsilon *= self.decay
-        if p <= self.epsilon:
-            return np.random.choice([i for i in range(self.action_space)])
-        else:
-            q_values = self.qtable_norms.loc[self.trans(state)].to_list()
+        """
+        Selects an action based on the following rules:
+        - Always takes the obligated action if the state has one.
+        - In permitted states, explores with probability epsilon or exploits the best action.
+        - If no transitions are defined, defaults to a random action.
+
+        Parameters:
+            state (dict): The current state of the agent.
+
+        Returns:
+            int: The chosen action index.
+        """
+        self.check_add(state)
+        x = int(round(state['observation']['players'][0]['position'][0]))
+        y = int(round(state['observation']['players'][0]['position'][1]))
+        state_index = self.coords_to_state(x, y)
+
+        if state_index == -1:
+            random.choice(range(len(self.action_space)))
+
+        obligated, permitted = self.transitions[state_index]
 
         
+
+        if len(obligated) > 0:
+            if random.uniform(0, 1) < .95:
+                return obligated[0]
+            else:
+                return random.choice(range(len(self.action_space)))
+
+
+        if len(permitted) > 0:
+            if np.random.uniform(0, 1) < self.epsilon:
+                action = random.choice(permitted)
+            else:
+                q_values = self.qtable.loc[self.trans(state)]
+                action =  max(permitted, key=lambda action: q_values[action])
+        else:
+            q_values = self.qtable.loc[self.trans(state)]
+            action =  max(range(len(self.action_space)), key=lambda action: q_values[action])
+
+        if self.epsilon > self.mini_epsilon:
+            self.epsilon *= self.decay
+        return action
+
+
+
     
     def state_to_coords(self, state, granularity=1):
         """Convert a state index to (x, y) coordinates."""
@@ -182,8 +243,6 @@ class LTLAgent:
         grid_y_min = 13 / img_height * self.y_max
         grid_y_max = (img_height - 52) / img_height * self.y_max
 
-        basket_x, basket_y = 2, 7  # Coordinates for the basket square
-
         # Draw grid lines within the bounds
         for x in range(self.x_max + 1):
             x_pos = grid_x_min + (x / self.x_max) * (grid_x_max - grid_x_min)
@@ -192,36 +251,20 @@ class LTLAgent:
             y_pos = grid_y_min + (y / self.y_max) * (grid_y_max - grid_y_min)
             ax.axhline(y_pos, color='black', linewidth=0.5, zorder=1)
 
-        # Tint the basket square yellow
-        basket_x_min = grid_x_min + (basket_x / self.x_max) * (grid_x_max - grid_x_min)
-        basket_x_max = grid_x_min + ((basket_x + 1) / self.x_max) * (grid_x_max - grid_x_min)
-        basket_y_min = grid_y_min + (basket_y / self.y_max) * (grid_y_max - grid_y_min)
-        basket_y_max = grid_y_min + ((basket_y + 1) / self.y_max) * (grid_y_max - grid_y_min)
-        #ax.add_patch(
-        #     plt.Rectangle(
-        #         (basket_x_min, basket_y_min),
-        #         basket_x_max - basket_x_min,
-        #         basket_y_max - basket_y_min,
-        #         color='yellow',
-        #         alpha=0.5,
-        #         zorder=2
-        #     )
-        # )
-
         # Add arrows for transitions within the grid bounds
         edge_arrow_directions = {
-            'NORTH': (0, 0.45, 0, 0.3),
-            'SOUTH': (0, -0.45, 0, -0.3),
-            'EAST': (0.45, 0, 0.3, 0),
-            'WEST': (-0.45, 0, -0.3, 0)
+            'NORTH': (0, -0.45, 0, -0.3),  # Flipped: arrow points downward
+            'SOUTH': (0, 0.45, 0, 0.3),   # Flipped: arrow points upward
+            'EAST': (-0.45, 0, -0.3, 0),  # Flipped: arrow points left
+            'WEST': (0.45, 0, 0.3, 0)     # Flipped: arrow points right
         }
-        edge_arrow_offsets = {'NORTH': (0.1, 0), 'SOUTH': (-0.1, 0), 'EAST': (0, 0.1), 'WEST': (0, -0.1)}
+        edge_arrow_offsets = {'NORTH': (-0.1, 0), 'SOUTH': (0.1, 0), 'EAST': (0, -0.1), 'WEST': (0, 0.1)}
         direction_encoding = {'NORTH': 1, 'SOUTH': 2, 'EAST': 3, 'WEST': 4}
 
         for y in range(self.y_max):
             for x in range(self.x_max):
                 state = (self.y_max - 1 - y) * self.x_max + x
-                if state in self.transitions and (self.transitions[state]['obligated'] or self.transitions[state]['permitted']):
+                if state in self.transitions and (self.transitions[state][0] or self.transitions[state][1]):
                     center_x = grid_x_min + (x + 0.5) / self.x_max * (grid_x_max - grid_x_min)
                     center_y = grid_y_min + (y + 0.5) / self.y_max * (grid_y_max - grid_y_min)
                     for direction, (dx, dy, arrow_dx, arrow_dy) in edge_arrow_directions.items():
@@ -233,22 +276,22 @@ class LTLAgent:
                         if neighbor_x < 0 or neighbor_x >= self.x_max or neighbor_y < 0 or neighbor_y >= self.y_max:
                             continue
                         if neighbor_state not in self.transitions or (
-                            not self.transitions[neighbor_state]['obligated'] and not self.transitions[neighbor_state]['permitted']):
+                            not self.transitions[neighbor_state][0] and not self.transitions[neighbor_state][1]):
                             continue
 
-                        if direction_encoding[direction] in self.transitions[state]['obligated']:
+                        if direction_encoding[direction] in self.transitions[state][0]:
                             color = 'black'
-                        elif direction_encoding[direction] in self.transitions[state]['permitted']:
+                        elif direction_encoding[direction] in self.transitions[state][1]:
                             color = 'gray'
                         else:
                             continue
 
                         offset_x, offset_y = edge_arrow_offsets[direction]
                         ax.arrow(center_x + dx * (grid_x_max - grid_x_min) / self.x_max + offset_x,
-                                 center_y + dy * (grid_y_max - grid_y_min) / self.y_max + offset_y,
-                                 arrow_dx * (grid_x_max - grid_x_min) / self.x_max * 0.8,
-                                 arrow_dy * (grid_y_max - grid_y_min) / self.y_max * 0.8,
-                                 head_width=0.05, head_length=0.05, fc=color, ec=color, zorder=3)
+                                center_y + dy * (grid_y_max - grid_y_min) / self.y_max + offset_y,
+                                arrow_dx * (grid_x_max - grid_x_min) / self.x_max * 0.8,
+                                arrow_dy * (grid_y_max - grid_y_min) / self.y_max * 0.8,
+                                head_width=0.05, head_length=0.05, fc=color, ec=color, zorder=3)
 
         plt.xlim(0, self.x_max)
         plt.ylim(0, self.y_max)
@@ -258,6 +301,15 @@ class LTLAgent:
         plt.title('Grid Showing Permitted and Obligated Transitions')
         plt.show()
 
+
+
+
+
+
+
+
+    def save_qtable(self):
+        self.qtable.to_json('qtable_foo.json') 
 
 
     

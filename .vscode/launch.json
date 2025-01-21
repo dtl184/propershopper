@@ -5,13 +5,13 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Train_basket_navigation Debug",
+            "name": "LTL training debug",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/train_basket_navigation.py",
+            "program": "${workspaceFolder}/ltl_training.py",
             "console": "integratedTerminal",
             "args": [
-                "-t 0"
+
             ]
         },
         {
@@ -22,6 +22,16 @@
             "console": "integratedTerminal",
             "args": [
                 "--keyboard_input"
+            ]
+        },
+        {
+            "name": "Base training debug",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/base_training.py",
+            "console": "integratedTerminal",
+            "args": [
+                
             ]
         }
     ]
