@@ -44,22 +44,22 @@ def calculate_reward(state, next_state, goal=None):
     return reached, reward
 
 
-def save_cumulative_rewards(cumulative_rewards, filename="new_cum.csv"):
+def save_experiment_rewards(experiment_rewards, filename="experiment_rewards.csv"):
     """
-    Save cumulative rewards to a CSV file.
+    Save experiment rewards to a CSV file with two columns:
+    - Experiment Number
+    - Rewards (List of rewards per episode for each experiment)
     """
-    try:
-        existing_rewards = pd.read_csv(filename)
-    except (FileNotFoundError, pd.errors.EmptyDataError):
-        existing_rewards = pd.DataFrame(columns=["Episode", "Cumulative Reward"])
+    # Prepare data for saving: list of experiment numbers and corresponding rewards
+    experiment_data = []
+    for i, rewards in enumerate(experiment_rewards, start=1):
+        experiment_data.append([i, rewards])  # [Experiment Number, List of rewards]
 
-    new_rewards = pd.DataFrame({
-        "Episode": range(len(existing_rewards) + 1, len(existing_rewards) + len(cumulative_rewards) + 1),
-        "Cumulative Reward": cumulative_rewards,
-    })
+    # Convert to DataFrame
+    df = pd.DataFrame(experiment_data, columns=["Experiment Number", "Rewards"])
 
-    updated_rewards = pd.concat([existing_rewards, new_rewards], ignore_index=True)
-    updated_rewards.to_csv(filename, index=False)
+    # Save to CSV
+    df.to_csv(filename, index=False)
 
 
 def plot_cumulative_rewards(filename="new_cum.csv"):
@@ -80,7 +80,7 @@ def plot_cumulative_rewards(filename="new_cum.csv"):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=9000, help="Port to connect to the environment")
-    parser.add_argument("--training_time", type=int, default=2000, help="Number of training episodes")
+    parser.add_argument("--training_time", type=int, default=1200, help="Number of training episodes")
     parser.add_argument("--episode_length", type=int, default=500, help="Maximum steps per episode")
     args = parser.parse_args()
 
@@ -92,71 +92,76 @@ def main():
     sock_game = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock_game.connect((HOST, PORT))
 
-    cumulative_rewards = []
-    history = []
-    for i in range(1, args.training_time + 1):
-        print(f"Starting episode {i}")
+    experiment_rewards = []
+    num_experiments = 10
+    # Whole training loop
+    for experiment in range(1, num_experiments + 1):
+        agent = BaseAgent(goal = (3, 18)) # reset q tables
+        print(f"Starting experiment {experiment}")
+        cumulative_rewards = []
+        history = []
+        # Experiment loop
+        for i in range(1, args.training_time + 1):
+            print(f"Starting episode {i}")
 
-        sock_game.send(str.encode("0 RESET"))
-        state = recv_socket_data(sock_game)
-        state = json.loads(state)
+            sock_game.send(str.encode("0 RESET"))
+            state = recv_socket_data(sock_game)
+            state = json.loads(state)
 
-        cnt = 0
-        cur_ep_return = 0
+            cnt = 0
+            cur_ep_return = 0
 
-        while not state['gameOver']:
-            cnt += 1
+            # Episode loop
+            while not state['gameOver']:
+                cnt += 1
 
-            action_index = agent.choose_action(state)
-            action = "0 " + agent.action_space[action_index]
+                action_index = agent.choose_action(state)
+                action = "0 " + agent.action_space[action_index]
 
-            sock_game.send(str.encode(action))  # send action to env
+                sock_game.send(str.encode(action))  # send action to env
 
-            next_state = recv_socket_data(sock_game)
-            next_state = json.loads(next_state)
+                next_state = recv_socket_data(sock_game)
+                next_state = json.loads(next_state)
 
-            if next_state == None:
-                normalized_reward = cur_ep_return / cnt if cnt > 0 else 0
-                cumulative_rewards.append(normalized_reward)
-                history.append(0)
-                break
-            
+                if next_state == None:
+                    normalized_reward = cur_ep_return / cnt if cnt > 0 else 0
+                    cumulative_rewards.append(normalized_reward)
+                    history.append(0)
+                    break
+                
 
-            goal_reached, reward = calculate_reward(state, next_state, agent.goal)
-            cur_ep_return += reward
+                goal_reached, reward = calculate_reward(state, next_state, agent.goal)
+                cur_ep_return += reward
 
-            agent.learning(action_index, state, next_state, reward)
-            state = next_state
+                agent.learning(action_index, state, next_state, reward)
+                state = next_state
 
-            if cnt > 500:
-                history.append(0)
-                normalized_reward = cur_ep_return / cnt if cnt > 0 else 0
-                cumulative_rewards.append(normalized_reward)
-                break
+                if cnt > 500:
+                    history.append(0)
+                    normalized_reward = cur_ep_return / cnt if cnt > 0 else 0
+                    cumulative_rewards.append(normalized_reward)
+                    break
 
-            if goal_reached:  # Success condition
-                history.append(1)
-                normalized_reward = cur_ep_return / cnt if cnt > 0 else 0
-                cumulative_rewards.append(normalized_reward)
-                break
+                if goal_reached:  # Success condition
+                    history.append(1)
+                    normalized_reward = cur_ep_return / cnt if cnt > 0 else 0
+                    cumulative_rewards.append(normalized_reward)
+                    break
 
-            if next_state["gameOver"]:
-                break
+                if next_state["gameOver"]:
+                    break
 
-        cumulative_rewards.append(cur_ep_return / cnt)
-        print(f"Episode {i} Reward: {cur_ep_return / cnt}")
+            cumulative_rewards.append(cur_ep_return / cnt)
+            print(f"Episode {i} Reward: {cur_ep_return / cnt}")
 
-        if i % 10 == 0:
-            print(f"Saving Q-table and rewards at episode {i}")
-            agent.save_qtable()
-            save_cumulative_rewards(cumulative_rewards)
-            cumulative_rewards = []
+        # once experiment has concluded, save rewards
+        experiment_rewards.append(cumulative_rewards)
+        save_experiment_rewards(experiment_rewards)
 
 
     sock_game.close()
     agent.save_qtable()
-    save_cumulative_rewards(cumulative_rewards)
-    plot_cumulative_rewards()
+
 
 
 if __name__ == "__main__":
