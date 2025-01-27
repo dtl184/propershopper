@@ -46,13 +46,12 @@ class BaseAgent:
         self.y_min = 2
         self.y_max = y_max
 
-    def trans(self, state):
+    def trans(self, state, granularity=0.15):
         """
         Extracts relevant state variables from the current state for learning.
         """
-        x = int(round(state['observation']['players'][0]['position'][0]))
-        y = int(round(state['observation']['players'][0]['position'][1]))
-        position = (x, y)
+        player_info = state['observation']['players'][0]
+        position = [int(player_info['position'][0] / granularity) * granularity, int(player_info['position'][1] / granularity) * granularity]
         return json.dumps({'position': position}, sort_keys=True)
 
     def check_add(self, state):
@@ -110,22 +109,6 @@ class BaseAgent:
 
         return action
 
-    def state_to_coords(self, state, granularity=1):
-        """Convert a state index to (x, y) coordinates."""
-        total_x_values = round((self.x_max - self.x_min) / granularity) + 1
-        y_index = state // total_x_values
-        x_index = state % total_x_values
-        x = self.x_min + x_index * granularity
-        y = self.y_min + y_index * granularity
-        return x, y
-
-    def coords_to_state(self, x, y, granularity=1):
-        """Convert (x, y) coordinates to a state index."""
-        total_x_values = self.x_max - self.x_min + 1
-        x_index = round(x) - self.x_min
-        y_index = round(y) - self.y_min
-        return y_index * total_x_values + x_index
-
     def save_qtable(self):
         """Save the Q-table to a JSON file."""
-        self.qtable.to_json('qtable_new.json')
+        self.qtable.to_json('qtable_base.json')

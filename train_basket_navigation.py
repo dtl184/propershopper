@@ -81,8 +81,8 @@ if __name__ == "__main__":
 ####################
     #Once you have your agent trained, or you want to continue training from a previous training session, you can load the qtable from a json file
     # agent.qtable_norms = pd.read_json('qtable_norms.json')
-    # agent.qtable_x = pd.read_json('qtable_x.json')
-    # agent.qtable_y = pd.read_json('qtable_y.json')
+    #agent.qtable_x = pd.read_json('qtable_x.json')
+    #agent.qtable_y = pd.read_json('qtable_y.json')
 ####################
     
     

@@ -38,7 +38,7 @@ def calculate_reward(state, next_state, goal=None):
             reached = True
             print("Goal reached!")
         else:
-            reward = (next_distance - curr_distance) * 5 - 0.05 #action cost
+            reward = (next_distance - curr_distance) * 5 - 0.05 # action cost
             
 
     return reached, reward
@@ -107,9 +107,10 @@ def main():
         while not state['gameOver']:
             cnt += 1
 
-            action = agent.choose_action(state)
-            action_cmd = f"0 {action}"
-            sock_game.send(str.encode(action_cmd))
+            action_index = agent.choose_action(state)
+            action = "0 " + agent.action_space[action_index]
+
+            sock_game.send(str.encode(action))  # send action to env
 
             next_state = recv_socket_data(sock_game)
             next_state = json.loads(next_state)
@@ -121,10 +122,10 @@ def main():
                 break
             
 
-            goal_reached, reward = calculate_reward(next_state, agent.goal)
+            goal_reached, reward = calculate_reward(state, next_state, agent.goal)
             cur_ep_return += reward
 
-            agent.learning(state, action, reward, next_state)
+            agent.learning(action_index, state, next_state, reward)
             state = next_state
 
             if cnt > 500:
@@ -142,10 +143,10 @@ def main():
             if next_state["gameOver"]:
                 break
 
-        cumulative_rewards.append(cur_ep_return)
-        print(f"Episode {i} Reward: {cur_ep_return}")
+        cumulative_rewards.append(cur_ep_return / cnt)
+        print(f"Episode {i} Reward: {cur_ep_return / cnt}")
 
-        if i % 100 == 0:
+        if i % 10 == 0:
             print(f"Saving Q-table and rewards at episode {i}")
             agent.save_qtable()
             save_cumulative_rewards(cumulative_rewards)

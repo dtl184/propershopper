@@ -7,6 +7,7 @@ from utils import recv_socket_data
 import matplotlib.pyplot as plt
 import pandas as pd
 import os
+import random
 
 def calculate_reward(state, next_state, goal=None):
     global min_distance  # Track the minimum distance to the goal
@@ -67,7 +68,7 @@ def safe_json_loads(data):
     except json.JSONDecodeError:
         return None
 
-def save_cumulative_rewards(cumulative_rewards, filename="cumulative_rewards.csv"):
+def save_cumulative_rewards(cumulative_rewards, filename="cumulative_rewards_idk.csv"):
     """
     Save the cumulative rewards to a CSV file.
 
@@ -141,7 +142,7 @@ def plot_average_reward(filename="cumulative_rewards.csv", window_size=5):
     
 
 
-def plot_normalized_rewards(filename="cumulative_rewards.csv"):
+def plot_normalized_rewards(filename="cumulative_rewards_idk.csv"):
     """
     Plot the normalized rewards from the CSV file.
     """
@@ -159,18 +160,14 @@ def plot_normalized_rewards(filename="cumulative_rewards.csv"):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=9000, help="Port to connect to the environment")
-    parser.add_argument('--training_time', type=int, default=200, help="Number of training episodes")
+    parser.add_argument('--training_time', type=int, default=500, help="Number of training episodes")
     parser.add_argument('--episode_length', type=int, default=500, help="Maximum steps per episode")
     args = parser.parse_args()
 
     trajectories = load_trajectories('trajectories.txt')
     agent = LTLAgent(n_states=437, goal=(3, 18))
-    #agent.qtable = pd.read_json('qtable.json')
     agent.learn_from_trajectories(trajectories)
-    agent.visualize()
-
-    plot_smoothed_rewards()
-
+    #plot_normalized_rewards()
     HOST = '127.0.0.1'
     PORT = args.port
     sock_game = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -188,35 +185,59 @@ def main():
             state = recv_socket_data(sock_game)
             state = safe_json_loads(state)
 
-            if state == None:
+            if state is None:
                 history.append(0)
                 continue
 
             cnt = 0
-            cur_ep_return = 0.
+            cur_ep_return = 0.0
+            last_state_index = 0
+            last_action = 0
 
             while not state['gameOver']:
                 cnt += 1
+                agent.current_state = agent.trans(state)
+                # Choose a new action only if the agent transitions to a new state
+                current_state_index = agent.coords_to_state(
+                    int(round(state['observation']['players'][0]['position'][0])),
+                    int(round(state['observation']['players'][0]['position'][1]))
+                )
 
-                action_index = agent.choose_action(state)
+                if current_state_index != last_state_index:
+                    # Agent has entered a new grid square, reward it and choose a new action
+                    goal_reached, reward = calculate_reward(state, state, agent.goal)
+                    cur_ep_return += reward
+
+                    # Choose the next action
+                    action_index = agent.choose_action(state)
+                    last_action = action_index
+
+                    # Update Q-table for the transition
+                    agent.learning(last_action, state, state, reward)
+                else:
+                    if np.random.uniform(0, 1) < .85:
+                        action_index = last_action
+                    else:
+                        action_index = random.choice(range(len(agent.action_space)))
+
                 action = "0 " + agent.action_space[action_index]
                 sock_game.send(str.encode(action))
-                #print("Sending action: ", action)
 
+                # If still in the same state, repeat the last action
+
+
+                # Update the state
                 next_state = recv_socket_data(sock_game)
                 next_state = safe_json_loads(next_state)
-                if next_state == None:
+
+                if next_state is None:
                     normalized_reward = cur_ep_return / cnt if cnt > 0 else 0
                     cumulative_rewards.append(normalized_reward)
                     history.append(0)
                     break
 
-                goal_reached, reward = calculate_reward(state, next_state, agent.goal)
-                cur_ep_return += reward
-
-                agent.learning(action_index, state, next_state, reward) # action cost
-                agent.save_qtable()
                 state = next_state
+                last_state_index = current_state_index
 
                 if cnt > episode_length:
                     history.append(0)
@@ -251,7 +272,6 @@ def main():
             print(f"Unexpected error in episode {i}: {e}. Skipping to next episode.")
             history.append(0)
             continue
-
 
     sock_game.close()
     save_cumulative_rewards(cumulative_rewards)

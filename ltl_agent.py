@@ -42,13 +42,13 @@ class LTLAgent:
         self.y_min = 2
         self.y_max = y_max
     
-    def trans(self, state):
+    def trans(self, state, granularity=0.15):
         """
         Extracts relevant state variables from the current state for learning.
         For the LTL agent's current task that is simply its position.
         """
-        x = int(round(state['observation']['players'][0]['position'][0]))
-        y = int(round(state['observation']['players'][0]['position'][1]))
+        x = round(state['observation']['players'][0]['position'][0] / granularity) * granularity
+        y = round(state['observation']['players'][0]['position'][1] / granularity) * granularity
         position = (x, y)
         return json.dumps({'position': position}, sort_keys=True)
 
@@ -181,8 +181,11 @@ class LTLAgent:
                 q_values = self.qtable.loc[self.trans(state)]
                 action =  max(permitted, key=lambda action: q_values[action])
         else:
-            q_values = self.qtable.loc[self.trans(state)]
-            action =  max(range(len(self.action_space)), key=lambda action: q_values[action])
+            if np.random.uniform(0, 1) < self.epsilon:
+                q_values = self.qtable.loc[self.trans(state)]
+                action =  max(range(len(self.action_space)), key=lambda action: q_values[action])
+            else:
+                action = random.choice(range(len(self.action_space)))
 
         if self.epsilon > self.mini_epsilon:
             self.epsilon *= self.decay
@@ -191,9 +194,18 @@ class LTLAgent:
 
 
     
-    def state_to_coords(self, state, granularity=1):
-        """Convert a state index to (x, y) coordinates."""
-        total_x_values = round((self.x_max - self.x_min) / granularity) + 1
+    def state_to_coords(self, state, granularity=.15):
+        """
+        Convert a state index back to (x, y) coordinates based on the granularity.
+
+        Args:
+            state (int): State index.
+            granularity (float): The granularity to discretize the position.
+
+        Returns:
+            tuple: (x, y) coordinates of the state.
+        """
+        total_x_values = round((self.x_max - self.x_min) / 1) + 1
         y_index = state // total_x_values
         x_index = state % total_x_values
         x = self.x_min + x_index * granularity
@@ -201,10 +213,20 @@ class LTLAgent:
         return x, y
 
     def coords_to_state(self, x, y, granularity=1):
-        """Convert (x, y) coordinates to a state index."""
-        total_x_values = self.x_max - self.x_min + 1
-        x_index = round(x) - self.x_min
-        y_index = round(y) - self.y_min
+        """
+        Convert (x, y) coordinates to a state index based on the granularity.
+
+        Args:
+            x (float): X-coordinate of the position.
+            y (float): Y-coordinate of the position.
+            granularity (float): The granularity to discretize the position.
+
+        Returns:
+            int: State index.
+        """
+        total_x_values = round((self.x_max - self.x_min) / granularity) + 1
+        x_index = round(x / granularity) - round(self.x_min / granularity)
+        y_index = round(y / granularity) - round(self.y_min / granularity)
         return y_index * total_x_values + x_index
     
     def visualize(self):

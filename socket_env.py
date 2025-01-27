@@ -164,15 +164,15 @@ def get_action_json(action, env_, obs, reward, done, info_=None, violations=''):
     return action_json
 
 def trans(state):
-
+    granularity = 0.15
     x, y = state[0]
     x_min, x_max = 1, 19  # Minimum x and y values
     y_min, y_max = 2, 24  # Maximum x and y values
 
 
-    total_x_values = x_max - x_min + 1
-    x_index = int(round(x) - x_min)
-    y_index = int(round(y) - y_min)
+    total_x_values = round((x_max - x_min) / granularity) + 1
+    x_index = round(x / granularity) - round(x_min / granularity)
+    y_index = round(y / granularity) - round(y_min / granularity)
     return y_index * total_x_values + x_index
 
 
@@ -183,7 +183,7 @@ last_written = False
 first_pair = False
 
 
-def record_trajectory(state, action, filename="trajectories.txt", first=False, last=False):
+def record_trajectory(state, action, filename="trajectories_new.txt", first=False, last=False):
     global first_written, last_written, first_pair
 
     state_action_pair = (trans(state), action)
