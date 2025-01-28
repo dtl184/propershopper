@@ -195,6 +195,7 @@ def main():
             last_action = 0
 
             while not state['gameOver']:
+                foo = 0
                 cnt += 1
                 agent.current_state = agent.trans(state)
                 # Choose a new action only if the agent transitions to a new state
@@ -202,33 +203,20 @@ def main():
                     int(round(state['observation']['players'][0]['position'][0])),
                     int(round(state['observation']['players'][0]['position'][1]))
                 )
+                action_index = agent.choose_action(state)
+                while foo < 5:
+                    foo += 1
+                    action = "0 " + agent.action_space[action_index]
+                    sock_game.send(str.encode(action))
 
-                if current_state_index != last_state_index:
-                    # Agent has entered a new grid square, reward it and choose a new action
-                    goal_reached, reward = calculate_reward(state, state, agent.goal)
-                    cur_ep_return += reward
+                    # Update the state
+                    next_state = recv_socket_data(sock_game)
+                    next_state = safe_json_loads(next_state)
 
-                    # Choose the next action
-                    action_index = agent.choose_action(state)
-                    last_action = action_index
+                goal_reached, reward = calculate_reward(state, next_state, agent.goal)
+                cur_ep_return += reward
 
-                    # Update Q-table for the transition
-                    agent.learning(last_action, state, state, reward)
-                else:
-                    if np.random.uniform(0, 1) < .85:
-                        action_index = last_action
-                    else:
-                        action_index = random.choice(range(len(agent.action_space)))
-
-                action = "0 " + agent.action_space[action_index]
-                sock_game.send(str.encode(action))
-
-                # If still in the same state, repeat the last action
-
-
-                # Update the state
-                next_state = recv_socket_data(sock_game)
-                next_state = safe_json_loads(next_state)
+                agent.learning(action_index, state, next_state, reward)
 
                 if next_state is None:
                     normalized_reward = cur_ep_return / cnt if cnt > 0 else 0
@@ -252,6 +240,9 @@ def main():
                     break
 
             # Track success rate over the last 50 episodes
+            print(f'Episode reward: {normalized_reward}')
+
+
             history = history[-50:]
             if i % 100 == 0:
                 print(f"Success rate: {np.mean(history)}")
