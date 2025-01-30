@@ -20,59 +20,6 @@ import pandas as pd
 import json  
 from irl.maxent import irl, find_feature_expectations, find_expected_svf, find_policy  
 
-class TransitionProbability:
-    """
-    The irl implementation requires a transition matrix for the environment. For each state,
-    we have to describe the probability of transitioning to every other state. In PS, an agent can only move 
-    1 unit NESW given that the resulting location is not blocked. 
-
-    The irl code simply gets a value from the matrix each iteration, e.g. transition[i, j, k]. This class
-    allows that call to be a call to self._getitem_ which dynamically computes if that transition is valid.
-    """
-    def __init__(self, n_states, n_actions, x_min, x_max, y_min, y_max):
-        self.n_states = n_states
-        self.n_actions = n_actions
-        self.x_min, self.x_max = x_min, x_max
-        self.y_min, self.y_max = y_min, y_max
-        self.granularity = 0.1  # Assumes one decimal place precision
-
-        # Compute total x values based on grid dimensions
-        self.total_x_values = round((x_max - x_min) / self.granularity) + 1
-
-    def state_to_coords(self, state):
-        """Convert a state index to (x, y) coordinates."""
-        y_index = state // self.total_x_values
-        x_index = state % self.total_x_values
-        x = self.x_min + x_index * self.granularity
-        y = self.y_min + y_index * self.granularity
-        return x, y
-
-    def coords_to_state(self, x, y):
-        """Convert (x, y) coordinates to a state index."""
-        x_index = round((x - self.x_min) / self.granularity)
-        y_index = round((y - self.y_min) / self.granularity)
-        return y_index * self.total_x_values + x_index
-
-    def __getitem__(self, indices):
-        """Dynamically compute the transition probability."""
-        i, j, k = indices
-        x, y = self.state_to_coords(i)
-
-        # Define actions (dx, dy): [NORTH, SOUTH, EAST, WEST]
-        actions = [(0, -0.1), (0, 0.1), (0.1, 0), (-0.1, 0)]
-        dx, dy = actions[j]
-
-        # Compute the next state coordinates
-        next_x, next_y = x + dx, y + dy
-
-        # Check bounds
-        if not (self.x_min <= next_x <= self.x_max and self.y_min <= next_y <= self.y_max):
-            return 0  # Out of bounds -> no transition
-
-        # Compute the expected next state
-        expected_state = self.coords_to_state(next_x, next_y)
-        return 1 if expected_state == k else 0
-
 
 class IRLAgent:
     def __init__(self, n_states, trajectories, discount=0.9, epochs=100, learning_rate=0.1):
@@ -223,10 +170,12 @@ class IRLAgent:
     #     # Calculate the unique index
     #     return y_index * total_x_values + x_index
 
-    def trans(self, x, y, x_min=1, y_min=2, x_max=19, y_max=24):
+    def trans(self, x, y, x_min=1, y_min=2, x_max=19, granularity=0.15):
 
-        grid_width = x_max - x_min + 1
-        return (y - y_min) * grid_width + (x - x_min)
+        total_x_values = round((x_max - x_min) / granularity) + 1
+        x_index = round(x / granularity) - round(x_min / granularity)
+        y_index = round(y / granularity) - round(y_min / granularity)
+        return y_index * total_x_values + x_index
 
     def inverse_trans(self, state_index, x_min=1, y_min=2, x_max=19, y_max=24):
         """

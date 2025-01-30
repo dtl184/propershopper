@@ -5,7 +5,7 @@ from irl_agent import IRLAgent
 import numpy as np
 from utils import recv_socket_data
 import matplotlib.pyplot as plt
-
+import torch
 from ltl_agent import LTLAgent
 
 
@@ -32,35 +32,6 @@ def load_trajectories(file_name):
 
     return trajectories
 
-def pad_trajectories(file_path):
-    """
-    Reads trajectories from a text file, pads each trajectory to the length
-    of the longest trajectory by repeating the last element, and writes the
-    padded trajectories to a new file.
-
-    Parameters:
-        file_path (str): The path to the input file.
-        output_path (str): The path to save the output file.
-    """
-    with open(file_path, 'r') as file:
-        lines = file.readlines()
-
-    # Convert each line to a list of tuples
-    trajectories = [eval(line.strip()) for line in lines]
-
-    # Find the maximum length of trajectories
-    max_length = max(len(traj) for traj in trajectories)
-
-    # Pad each trajectory to the maximum length
-    padded_trajectories = []
-    for traj in trajectories:
-        if len(traj) < max_length:
-            last_element = traj[-1]
-            traj += [last_element] * (max_length - len(traj))
-        padded_trajectories.append(traj)
-
-    return padded_trajectories
-
 
 
 def main():
@@ -82,7 +53,7 @@ def main():
     with open("learned_reward.txt", "r") as file:
          agent.set_reward(np.array(eval(file.read())))
 
-    agent.learn_reward()
+    #agent.learn_reward()
 
     plt.subplot(1, 2, 2)
     plt.pcolor(agent.reward.reshape((19, 23)))
@@ -114,10 +85,7 @@ def main():
         next_state = recv_socket_data(sock_game)
         next_state = json.loads(next_state)
 
-        # Check if the basket is picked up (example condition)
-        # if "basket" in next_state.get("inventory", []):
-        #     print("Basket picked up! Task complete.")
-        #     done = True
+
 
         # Update the state
         state = next_state
