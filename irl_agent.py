@@ -14,7 +14,7 @@ import pickle
 import pandas as pd
 import argparse
 from termcolor import colored
-
+from helper import project_collision
 import numpy as np
 import pandas as pd
 import json  
@@ -27,14 +27,11 @@ class IRLAgent:
         self.n_states = n_states
         self.feature_matrix = self.generate_feature_matrix()
         self.trajectories = trajectories
-        self.transition_probability = self.generate_transition_matrix() #TransitionProbability(
-#     n_states=437,  
-#     n_actions=4,  
-#     x_min=0.5,
-#     x_max=19,
-#     y_min=2.0,
-#     y_max=24
-# )   
+        self.x_min = 1
+        self.x_max = 19
+        self.y_min = 2
+        self.y_max = 24
+        self.transition_probability = None
         self.discount = discount              
         self.epochs = epochs                  
         self.learning_rate = learning_rate    
@@ -47,18 +44,15 @@ class IRLAgent:
 
 
 
-    def generate_transition_matrix(self):
-
+    def generate_transition_matrix(self, state):
         x_min, x_max = 1, 19
         y_min, y_max = 2, 24
 
         grid_width = x_max - x_min + 1
         grid_height = y_max - y_min + 1
-        # assert self.n_states == grid_width * grid_height, "n_states must match grid dimensions."
 
         n_actions = len(self.action_space)
         transition_matrix = np.zeros((self.n_states, n_actions, self.n_states))
-
 
         # Populate the transition matrix
         for i in range(self.n_states):
@@ -73,20 +67,35 @@ class IRLAgent:
                     dx, dy = 1, 0
                 elif action == 'WEST':
                     dx, dy = -1, 0
+
                 # Calculate the intended next position
                 intended_x, intended_y = xi + dx, yi + dy
 
+                # Prepare the object structure for collision checking
+                obj = {
+                    "position": [xi, yi],  
+                    "width": 1,  
+                    "height": 1  
+                }
+
+                  # Convert action string to Direction enum
+
+                # Check if movement is within valid bounds
                 if x_min <= intended_x <= x_max and y_min <= intended_y <= y_max:
-                    # Valid move: compute next state
-                    next_state = self.trans(intended_x, intended_y)
+                    # Check for projected collision
+                    if project_collision(obj, state, j):
+                        next_state = i  # Stay in the same place if collision is detected
+                    else:
+                        next_state = self.trans(state)
                 else:
-                    # Invalid move: stay in the same state
-                    next_state = i
+                    next_state = i  # Stay in the same place if movement is out of bounds
 
-                # Set the transition probability
-                transition_matrix[i, j, next_state] = 1.0
+                # Assign transition probability (only allow if there's no collision)
+                val = 1.0 if next_state != i else 0.0
+                transition_matrix[i, j, next_state] = val
 
-        return transition_matrix
+        self.transition_probability = transition_matrix
+
 
     def feature_vector(self, i):
 
@@ -154,44 +163,19 @@ class IRLAgent:
         else:
             return 1
         
-    
-    # def trans(self, x, y):
-    #     x_min, y_min = 0.5, 2.1  # Minimum x and y values
-    #     x_max, y_max = 19.0, 24.0  # Maximum x and y values
-    #     granularity = 0.1  # Step size for precision
 
-    #     # Compute the indices for x and y
-    #     x_index = round((x - x_min) / granularity)
-    #     y_index = round((y - y_min) / granularity)
+    def trans(self, state):
+        x, y = state['observation']['players'][0]['position']
 
-    #     # Total number of x values
-    #     total_x_values = round((x_max - x_min) / granularity) + 1
-
-    #     # Calculate the unique index
-    #     return y_index * total_x_values + x_index
-
-    def trans(self, x, y, x_min=1, y_min=2, x_max=19, granularity=0.15):
-
-        total_x_values = round((x_max - x_min) / granularity) + 1
-        x_index = round(x / granularity) - round(x_min / granularity)
-        y_index = round(y / granularity) - round(y_min / granularity)
+        total_x_values = self.x_max - self.x_min + 1
+        x_index = round(x) - self.x_min
+        y_index = round(y) - self.y_min
         return y_index * total_x_values + x_index
 
-    def inverse_trans(self, state_index, x_min=1, y_min=2, x_max=19, y_max=24):
-        """
-        Converts a unique integer state index back into the (x, y) coordinates.
-
-        Parameters:
-            state_index (int): The unique state index.
-            x_min (int): The minimum x value. Default is 0.
-            y_min (int): The minimum y value. Default is 0.
-            x_max (int): The maximum x value. Default is 19.
-            y_max (int): The maximum y value. Default is 24.
-
-        Returns:
-            tuple: The (x, y) coordinates.
-        """
-        grid_width = x_max - x_min + 1
-        y = state_index // grid_width + y_min
-        x = state_index % grid_width + x_min
+    def inverse_trans(self, state_index):
+        total_x_values = self.x_max - self.x_min + 1
+        y_index = state_index // total_x_values
+        x_index = state_index % total_x_values
+        x = x_index + self.x_min
+        y = y_index + self.y_min
         return x, y

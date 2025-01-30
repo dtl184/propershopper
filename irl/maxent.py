@@ -122,6 +122,7 @@ def find_expected_svf(n_states, r, n_actions, discount,
     """
 
     n_trajectories = len(trajectories)
+    max_traj_length = max(len(traj) for traj in trajectories)
     #trajectory_length = len(trajectories[0]) #TODO: deal with all trajectories having to be the same length
 
     # policy = find_policy(n_states, r, n_actions, discount,
@@ -137,7 +138,7 @@ def find_expected_svf(n_states, r, n_actions, discount,
         traj_lengths.append(len(trajectory))
     p_start_state = start_state_count/n_trajectories
 
-    expected_svf = np.tile(p_start_state, (trajectory_length, 1)).T
+    expected_svf = np.tile(p_start_state, (max_traj_length, 1)).T
     for trajectory_length in traj_lengths:
         for t in range(1, trajectory_length):
             expected_svf[:, t] = 0

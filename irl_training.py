@@ -32,6 +32,12 @@ def load_trajectories(file_name):
 
     return trajectories
 
+def save_reward(reward, filename="reward.txt"):
+    with open(filename, "w") as file:
+        for value in reward:
+            file.write(f"{value}\n")
+    print(f"Reward saved to {filename}")
+
 
 
 def main():
@@ -50,16 +56,10 @@ def main():
 
     agent = IRLAgent(n_states=437, trajectories=trajectories)
 
-    with open("learned_reward.txt", "r") as file:
-         agent.set_reward(np.array(eval(file.read())))
 
-    #agent.learn_reward()
+    # with open("learned_reward.txt", "r") as file:
+    #      agent.set_reward(np.array(eval(file.read())))
 
-    plt.subplot(1, 2, 2)
-    plt.pcolor(agent.reward.reshape((19, 23)))
-    plt.colorbar()
-    plt.title("Recovered reward")
-    plt.show()
 
 
     HOST = '127.0.0.1'
@@ -70,6 +70,21 @@ def main():
     sock_game.send(str.encode("0 RESET"))  
     state = recv_socket_data(sock_game)
     state = json.loads(state)
+
+    agent.generate_transition_matrix(state)
+
+    agent.learn_reward()
+
+    save_reward(agent.reward)
+
+    plt.subplot(1, 2, 2)
+    plt.pcolor(agent.reward.reshape((19, 23)))
+    plt.colorbar()
+    plt.title("Recovered reward")
+    plt.show()
+
+    
+
 
     done = False
     while not done:
