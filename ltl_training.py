@@ -68,27 +68,46 @@ def safe_json_loads(data):
     except json.JSONDecodeError:
         return None
 
-def save_cumulative_rewards(cumulative_rewards, filename="cumulative_rewards_idk.csv"):
-    """
-    Save the cumulative rewards to a CSV file.
+import pandas as pd
 
-    Args:
-        cumulative_rewards (list): List of cumulative rewards per episode.
-        filename (str): File name to save the data.
+import pandas as pd
+import ast
+
+def save_experiment_rewards(current_experiment, current_episode_reward, filename="experiment_rewards.csv"):
     """
-    if os.path.exists(filename) and os.path.getsize(filename) > 0:
-        # File exists and is not empty
-        existing_data = pd.read_csv(filename)
-        new_data = pd.DataFrame({"Episode": range(len(existing_data) + 1, len(existing_data) + len(cumulative_rewards) + 1),
-                                 "Cumulative Reward": cumulative_rewards})
-        combined_data = pd.concat([existing_data, new_data], ignore_index=True)
+    Appends the current episode reward to the row corresponding to the current experiment.
+    If the experiment row doesn't exist, it creates one.
+    
+    Parameters:
+    - current_experiment (int): The current experiment number.
+    - current_episode_reward (float): The reward for the current episode.
+    - filename (str): The name of the CSV file to save the rewards.
+    """
+    # Check if the file exists and load it, or create a new DataFrame
+    try:
+        df = pd.read_csv(filename)
+        # Convert the "Rewards" column back to a list if it exists
+        if "Rewards" in df.columns:
+            df["Rewards"] = df["Rewards"].apply(ast.literal_eval)
+    except (FileNotFoundError, ValueError):
+        # Create a new DataFrame if the file doesn't exist or is empty
+        df = pd.DataFrame(columns=["Experiment Number", "Rewards"])
+
+    # Check if the current experiment exists in the DataFrame
+    if current_experiment in df["Experiment Number"].values:
+        # Append the reward to the existing rewards list
+        df.loc[df["Experiment Number"] == current_experiment, "Rewards"].iloc[0].append(current_episode_reward)
     else:
-        # File does not exist or is empty
-        combined_data = pd.DataFrame({"Episode": range(1, len(cumulative_rewards) + 1), 
-                                      "Cumulative Reward": cumulative_rewards})
+        # Create a new row for the experiment
+        new_row = {"Experiment Number": current_experiment, "Rewards": [current_episode_reward]}
+        df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
 
-    combined_data.to_csv(filename, index=False)
-    print(f"Cumulative rewards saved to {filename}")
+    # Save the updated DataFrame back to the CSV file
+    df.to_csv(filename, index=False)
+
+
+
+
 
 def smooth_rewards(rewards, window_size=5):
     return np.convolve(rewards, np.ones(window_size)/window_size, mode='valid')
@@ -160,7 +179,7 @@ def plot_normalized_rewards(filename="cumulative_rewards_idk.csv"):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=9000, help="Port to connect to the environment")
-    parser.add_argument('--training_time', type=int, default=500, help="Number of training episodes")
+    parser.add_argument('--training_time', type=int, default=1000, help="Number of training episodes")
     parser.add_argument('--episode_length', type=int, default=500, help="Maximum steps per episode")
     args = parser.parse_args()
 
@@ -175,12 +194,20 @@ def main():
 
     training_time = args.training_time
     episode_length = args.episode_length
-    cumulative_rewards = []
-    history = []
+    
+    num_experiments = 10
+    experiment_rewards = []
+    # Whole training loop
+    for experiment in range(num_experiments + 1):
+        # reset q tables at beginning of each experiment
+        agent.qtable = pd.DataFrame(columns=[i for i in range(len(agent.action_space))])
+        agent.epsilon = 0.8 # reset epsilon because of decay
+        cumulative_rewards = [] # hol
+        # Experiment loop
+        for i in range(1, training_time + 1):
+            history = []
 
-    for i in range(1, training_time + 1):
-        print(f'Starting episode: {i}\n')
-        try:
+            #print(f'Starting episode: {i}\n')
             sock_game.send(str.encode("0 RESET"))  # reset the game
             state = recv_socket_data(sock_game)
             state = safe_json_loads(state)
@@ -194,6 +221,7 @@ def main():
             last_state_index = 0
             last_action = 0
 
+            # Episode loop
             while not state['gameOver']:
                 foo = 0
                 cnt += 1
@@ -218,54 +246,40 @@ def main():
 
                 agent.learning(action_index, state, next_state, reward)
 
-                if next_state is None:
+                norms = next_state["violations"]
+
+                if next_state['observation']['players'][0]['position'][0] < 0:
                     normalized_reward = cur_ep_return / cnt if cnt > 0 else 0
                     cumulative_rewards.append(normalized_reward)
-                    history.append(0)
+                    break
+
+                if norms != '' and norms[0] == 'Player 0 exited through an entrance':
+                    normalized_reward = cur_ep_return / cnt if cnt > 0 else 0
+                    cumulative_rewards.append(normalized_reward)
+                    break
+
+                if next_state is None or cnt > episode_length or goal_reached or next_state["gameOver"]:
+                    normalized_reward = cur_ep_return / cnt if cnt > 0 else 0
+                    cumulative_rewards.append(normalized_reward)
+                    if goal_reached:
+                        history.append(1)
+                    else:
+                        history.append(0)
                     break
 
                 state = next_state
-                last_state_index = current_state_index
 
-                if cnt > episode_length:
-                    history.append(0)
-                    normalized_reward = cur_ep_return / cnt if cnt > 0 else 0
-                    cumulative_rewards.append(normalized_reward)
-                    break
+            # episode finished
+            print(f'Experiment {experiment} episode {i} reward: {cur_ep_return / cnt}')
+            #experiment_rewards.append(cumulative_rewards)
+            save_experiment_rewards(experiment, cur_ep_return / cnt)
+            agent.save_qtable()
+        
 
-                if goal_reached:  # Success condition
-                    history.append(1)
-                    normalized_reward = cur_ep_return / cnt if cnt > 0 else 0
-                    cumulative_rewards.append(normalized_reward)
-                    break
-
-            # Track success rate over the last 50 episodes
-            print(f'Episode reward: {normalized_reward}')
-
-
-            history = history[-50:]
-            if i % 100 == 0:
-                print(f"Success rate: {np.mean(history)}")
-        except ConnectionAbortedError as e:
-            print(f"Connection error during episode {i}: {e}. Resetting for next episode.")
-            try:
-                sock_game.close()
-                sock_game = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock_game.connect((HOST, PORT))
-            except Exception as reconnect_error:
-                print(f"Failed to reconnect: {reconnect_error}. Exiting.")
-                break
-        except json.JSONDecodeError as e:
-            print(f"JSON decode error in episode {i}: {e}. Skipping to next episode.")
-            history.append(0)
-            continue
-        except Exception as e:
-            print(f"Unexpected error in episode {i}: {e}. Skipping to next episode.")
-            history.append(0)
-            continue
+        # then begin a new experiment with new q table
 
     sock_game.close()
-    save_cumulative_rewards(cumulative_rewards)
+    save_experiment_rewards(cumulative_rewards)
 
 if __name__ == "__main__":
     main()

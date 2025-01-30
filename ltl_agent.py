@@ -161,7 +161,7 @@ class LTLAgent:
         state_index = self.coords_to_state(x, y)
 
         if state_index == -1:
-            random.choice(range(len(self.action_space)))
+            return random.choice(range(len(self.action_space)))
 
         obligated, permitted = self.transitions[state_index]
 
