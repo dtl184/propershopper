@@ -60,16 +60,8 @@ def main():
     # with open("learned_reward.txt", "r") as file:
     #      agent.set_reward(np.array(eval(file.read())))
 
-
-
-    HOST = '127.0.0.1'
-    PORT = args.port
-    sock_game = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock_game.connect((HOST, PORT))
-
-    sock_game.send(str.encode("0 RESET"))  
-    state = recv_socket_data(sock_game)
-    state = json.loads(state)
+    with open("state.json", "r") as file:
+        state = json.load(file)
 
     agent.generate_transition_matrix(state)
 
@@ -82,6 +74,17 @@ def main():
     plt.colorbar()
     plt.title("Recovered reward")
     plt.show()
+
+
+
+    HOST = '127.0.0.1'
+    PORT = args.port
+    sock_game = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock_game.connect((HOST, PORT))
+
+    sock_game.send(str.encode("0 RESET"))  
+    state = recv_socket_data(sock_game)
+    state = json.loads(state)
 
     
 
