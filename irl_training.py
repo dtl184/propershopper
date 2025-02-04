@@ -4,10 +4,12 @@ import json
 from irl_agent import IRLAgent
 import numpy as np
 from utils import recv_socket_data
+import matplotlib
 import matplotlib.pyplot as plt
+#matplotlib.use("TkAgg") 
 import torch
 from ltl_agent import LTLAgent
-
+import ast
 
 def load_trajectories(file_name):
     """
@@ -57,23 +59,32 @@ def main():
     agent = IRLAgent(n_states=437, trajectories=trajectories)
 
 
-    # with open("learned_reward.txt", "r") as file:
-    #      agent.set_reward(np.array(eval(file.read())))
 
-    with open("state.json", "r") as file:
-        state = json.load(file)
+    with open("learned_reward.txt", "r") as file:
+        data = file.read().strip()  # Read and remove extra spaces/newlines
 
-    agent.generate_transition_matrix(state)
+    # Safely evaluate the array string
+    lst = ast.literal_eval(data)
 
-    agent.learn_reward()
+    lst = np.array(lst)
 
-    save_reward(agent.reward)
+    # Set the reward in the agent
+    agent.set_reward(lst)
+
+    # with open("state.json", "r") as file:
+    #     state = json.load(file)
+
+    #agent.generate_transition_matrix(state)
+
+    #agent.learn_reward()
+
+    #save_reward(agent.reward)
 
     plt.subplot(1, 2, 2)
     plt.pcolor(agent.reward.reshape((19, 23)))
     plt.colorbar()
     plt.title("Recovered reward")
-    plt.show()
+    plt.savefig("reward_graph.png")
 
 
 
@@ -92,16 +103,16 @@ def main():
     done = False
     while not done:
         # Agent chooses the next action based on the state
-        x = int(round(state['observation']['players'][0]['position'][0]))
-        y = int(round(state['observation']['players'][0]['position'][1]))
-        action_index = agent.choose_action((x, y))
-        action = "0 " + agent.action_space[action_index]
-        print(f"Sending action: {action}")
 
-        # Send the action to the environment
-        sock_game.send(str.encode(action))
-        next_state = recv_socket_data(sock_game)
-        next_state = json.loads(next_state)
+        action_index = agent.choose_action(state)
+
+        for _ in range(6):
+            action = "0 " + agent.action_space[action_index]
+
+            # Send the action to the environment
+            sock_game.send(str.encode(action))
+            next_state = recv_socket_data(sock_game)
+            next_state = json.loads(next_state)
 
 
 

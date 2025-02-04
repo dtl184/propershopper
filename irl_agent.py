@@ -133,6 +133,8 @@ class IRLAgent:
         )
     
     def choose_action(self, state):
+        x = int(round(state['observation']['players'][0]['position'][0]))
+        y = int(round(state['observation']['players'][0]['position'][1]))
 
         action_rewards = []
         
@@ -146,10 +148,10 @@ class IRLAgent:
             elif action == 'WEST':
                 dx, dy = -1, 0
         
-            next_x = state[0] + dx
-            next_y = state[1] + dy
+            next_x = x + dx
+            next_y = y + dy
 
-            next_state_index = self.trans(next_x, next_y)
+            next_state_index = self.coord_trans(next_x, next_y)
             action_rewards.append(self.reward[next_state_index])
 
         act = action_rewards.index(max(action_rewards))
@@ -162,6 +164,12 @@ class IRLAgent:
             return 0
         else:
             return 1
+
+    def coord_trans(self, x, y):
+        total_x_values = self.x_max - self.x_min + 1
+        x_index = round(x) - self.x_min
+        y_index = round(y) - self.y_min
+        return y_index * total_x_values + x_index
         
 
     def trans(self, state):
