@@ -8,7 +8,7 @@ import os
 from env import SupermarketEnv, SinglePlayerSupermarketEnv
 from norms.norm import NormWrapper
 from norms.norms import *
-
+import numpy as np
 import pygame
 
 ACTION_COMMANDS = ['NOP', 'NORTH', 'SOUTH', 'EAST', 'WEST', 'INTERACT', 'TOGGLE_CART', 'CANCEL', 'SELECT','RESET']
@@ -22,6 +22,8 @@ def serialize_data(data):
         return [serialize_data(item) for item in data]
     else:
         return data
+
+
 
 class SupermarketEventHandler:
     def __init__(self, env, keyboard_input=False):
@@ -91,19 +93,25 @@ class SupermarketEventHandler:
             if keys[pygame.K_UP]:  # up
                 self.env.step(self.single_player_action(PlayerAction.NORTH))
                 record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=0)
+                mark_state(state=[player.position, player.direction.value, player.curr_cart])
             elif keys[pygame.K_DOWN]:  # down
                 self.env.step(self.single_player_action(PlayerAction.SOUTH))
                 record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=1)
+                mark_state(state=[player.position, player.direction.value, player.curr_cart])
             elif keys[pygame.K_LEFT]:  # left
                 self.env.step(self.single_player_action(PlayerAction.WEST))
                 record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=3)
+                mark_state(state=[player.position, player.direction.value, player.curr_cart])
             elif keys[pygame.K_RIGHT]:  # right
                 self.env.step(self.single_player_action(PlayerAction.EAST))
                 record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=2)
+                mark_state(state=[player.position, player.direction.value, player.curr_cart])
             elif keys[pygame.K_z]:
                 record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=0, first=True)
             elif keys[pygame.K_x]:
                 record_trajectory(state=[player.position, player.direction.value, player.curr_cart], action=0, last=True)
+            elif keys[pygame.K_q]:
+                mark_state(state=[player.position, player.direction.value, player.curr_cart])
 
         self.running = self.env.unwrapped.game.running
 
@@ -163,6 +171,20 @@ def get_action_json(action, env_, obs, reward, done, info_=None, violations=''):
     # action_json = {"hello": "world"}
     return action_json
 
+def mark_state(state, filename="valid_states.txt"):
+
+    if os.path.exists(filename):
+        with open(filename, "r") as f:
+            arr = np.array(json.load(f), dtype=int)
+    else:
+            arr = np.zeros(437, dtype=int)
+    
+    index = trans(state)
+    arr[index] = 1
+    with open(filename, "w+") as f:
+        json.dump(arr.tolist(), f)
+
+
 def trans(state):
     x, y = state[0]
     x_min, x_max = 1, 19  # Minimum x and y values
@@ -187,25 +209,29 @@ def record_trajectory(state, action, filename="trajectories_new.txt", first=Fals
 
     state_action_pair = (trans(state), action)
 
-    with open(filename, "a") as file:
-        if first and not first_written:
-            file.write("[")
-            first_written = True
-            return
-        if last and not last_written:
-            file.write("]\n")
-            last_written = True
-            sock_agent.close()
-            return
-        if first and first_written:
-            return
-        if last and last_written:
-            return
-        if not first_pair:
-            file.write(str(state_action_pair))
-            first_pair = True
-        else:
-            file.write("," + str(state_action_pair))
+    cur_state = trans(state)
+
+    print(f'Current state index: {cur_state}\n')
+
+    # with open(filename, "a") as file:
+    #     if first and not first_written:
+    #         file.write("[")
+    #         first_written = True
+    #         return
+    #     if last and not last_written:
+    #         file.write("]\n")
+    #         last_written = True
+    #         sock_agent.close()
+    #         return
+    #     if first and first_written:
+    #         return
+    #     if last and last_written:
+    #         return
+    #     if not first_pair:
+    #         file.write(str(state_action_pair))
+    #         first_pair = True
+    #     else:
+    #         file.write("," + str(state_action_pair))
 
 
 

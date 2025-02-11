@@ -1,11 +1,11 @@
 import json
 import random
 import socket
-
+import matplotlib.pyplot as plt
 import gymnasium as gym
 from env import SupermarketEnv
 from utils import recv_socket_data
-
+import matplotlib.image as mpimg
 from Q_Learning_agent import QLAgent  # Make sure to import your QLAgent class 
 from planner import HyperPlanner
 from get_obj_agent import GetObjAgent
@@ -44,19 +44,32 @@ class IRLAgent:
 
 
 
-    def generate_transition_matrix(self, state):
+    def generate_transition_matrix(self):
+        """
+        Generates a transition matrix where each valid state (1 in valid_states)
+        can transition to adjacent valid states with probability 1.
+        """
         x_min, x_max = 1, 19
         y_min, y_max = 2, 24
-
-        grid_width = x_max - x_min + 1
-        grid_height = y_max - y_min + 1
 
         n_actions = len(self.action_space)
         transition_matrix = np.zeros((self.n_states, n_actions, self.n_states))
 
-        # Populate the transition matrix
+        # Load valid states
+        try:
+            with open("valid_states.txt", "r") as f:
+                valid_states = np.array(json.load(f))  # 1D list indexed by state index
+        except (FileNotFoundError, json.JSONDecodeError):
+            print("Error: valid_states.txt not found or corrupted.")
+            return
+
+        # Iterate over all states
         for i in range(self.n_states):
-            xi, yi = self.inverse_trans(i)  # Current state's coordinates
+            # If the state is invalid, no transitions allowed
+            if valid_states[i] == 0:
+                continue
+
+            xi, yi = self.inverse_trans(i)  # Convert state index to coordinates
 
             for j, action in enumerate(self.action_space):
                 if action == 'NORTH':
@@ -69,32 +82,18 @@ class IRLAgent:
                     dx, dy = -1, 0
 
                 # Calculate the intended next position
-                intended_x, intended_y = xi + dx, yi + dy
+                next_x, next_y = xi + dx, yi + dy
 
-                # Prepare the object structure for collision checking
-                obj = {
-                    "position": [xi, yi],  
-                    "width": 1,  
-                    "height": 1  
-                }
-
-                  # Convert action string to Direction enum
-
-                # Check if movement is within valid bounds
-                if x_min <= intended_x <= x_max and y_min <= intended_y <= y_max:
-                    # Check for projected collision
-                    if project_collision(obj, state, j):
-                        next_state = i  # Stay in the same place if collision is detected
-                    else:
-                        next_state = self.trans(state)
-                else:
-                    next_state = i  # Stay in the same place if movement is out of bounds
-
-                # Assign transition probability (only allow if there's no collision)
-                val = 1.0 if next_state != i else 0.0
-                transition_matrix[i, j, next_state] = val
+                # Check if the next state is within bounds
+                if x_min <= next_x <= x_max and y_min <= next_y <= y_max:
+                    next_state = self.coord_trans(next_x, next_y)  # Get the next state index
+                    
+                    # Check if next state is valid in valid_states
+                    if valid_states[next_state] == 1:
+                        transition_matrix[i, j, next_state] = 1.0  # Assign transition probability
 
         self.transition_probability = transition_matrix
+
 
 
     def feature_vector(self, i):
@@ -187,3 +186,89 @@ class IRLAgent:
         x = x_index + self.x_min
         y = y_index + self.y_min
         return x, y
+    
+
+
+    def visualize_valid_states(
+        self, filename="valid_states.txt", image_path="map.png", grid_shape=(19, 23), 
+        x_offset=13, y_offset=52
+    ):
+        """
+        Loads valid_states.txt, overlays a 19x23 grid on map.png, 
+        colors active grid squares, and displays the index in each grid cell.
+        Saves the visualization as 'valid_states_grid.png'.
+        """
+
+        # Step 1: Load the valid states file
+        try:
+            with open(filename, "r") as f:
+                state_list = json.load(f)  # Load list of 0s and 1s
+        except (FileNotFoundError, json.JSONDecodeError):
+            print("Error: valid_states.txt not found or corrupted.")
+            return
+
+        # Step 2: Ensure data size matches expected grid size
+        if len(state_list) != grid_shape[0] * grid_shape[1]:
+            print("Error: Data size does not match expected grid dimensions.")
+            return
+
+        # Step 3: Reshape into 2D grid
+        state_grid = np.array(state_list).reshape(grid_shape)
+
+        # Step 4: Load the background image
+        try:
+            img = mpimg.imread(image_path)
+            img_height, img_width, _ = img.shape
+        except FileNotFoundError:
+            print("Error: The file map.png was not found.")
+            return
+
+        # Step 5: Compute grid offsets and extents
+        x_extent_min = x_offset / img_width * grid_shape[0]  # Adjust for x offset
+        x_extent_max = (img_width - x_offset) / img_width * grid_shape[0]
+        y_extent_min = y_offset / img_height * grid_shape[1]  # Adjust for y offset
+        y_extent_max = (img_height - x_offset) / img_height * grid_shape[1]
+
+        # Step 6: Set up figure and axes
+        fig, ax = plt.subplots(figsize=(10, 10))
+        ax.imshow(img, extent=[0, grid_shape[0], grid_shape[1], 0], aspect='auto', zorder=0)  # Keep top-left origin
+
+        # Step 7: Draw the grid, color visited cells, and add index numbers
+        for x in range(grid_shape[0]):  # 19 columns
+            for y in range(grid_shape[1]):  # 23 rows
+                x_pos = x_extent_min + ((x + self.x_min - 1) / grid_shape[0]) * (x_extent_max - x_extent_min)
+                y_pos = y_extent_min + ((y + self.y_min - 2) / grid_shape[1]) * (y_extent_max - y_extent_min)
+
+                # Calculate the 1D index for the grid cell
+                index = self.coord_trans(x + self.x_min, y + self.y_min)
+
+                # Color the grid square
+                if state_list[index] == 1:  
+                    color = "white"  # Visited
+                else:
+                    color = "black"  # Unvisited
+                ax.add_patch(plt.Rectangle((x_pos, y_pos), 1, 1, color=color, alpha=0.7, zorder=1))
+
+                # Add the index number in each grid cell
+                ax.text(x_pos + 0.5, y_pos + 0.5, str(index), color="red", fontsize=8, 
+                        ha="center", va="center", zorder=3, fontweight="bold")
+
+        # Step 8: Draw grid lines within the correct extents
+        for x in range(grid_shape[0] + 1):  # Vertical grid lines (19)
+            x_pos = x_extent_min + ((x + self.x_min - 1) / grid_shape[0]) * (x_extent_max - x_extent_min)
+            ax.axvline(x_pos, color='gray', linewidth=0.5, zorder=2)
+
+        for y in range(grid_shape[1] + 1):  # Horizontal grid lines (23)
+            y_pos = y_extent_min + ((y + self.y_min - 2) / grid_shape[1]) * (y_extent_max - y_extent_min)
+            ax.axhline(y_pos, color='gray', linewidth=0.5, zorder=2)
+
+        # Step 9: Formatting
+        ax.set_xlim(0, grid_shape[0])
+        ax.set_ylim(grid_shape[1], 0)  # Invert y-axis to match top-left origin
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_title('Valid States Overlayed on Map with Index Numbers')
+
+        # Step 10: Save the figure instead of showing it
+        plt.savefig('valid_states_grid.png', dpi=300, bbox_inches='tight')
+
