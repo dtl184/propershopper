@@ -60,31 +60,27 @@ def main():
     #agent.visualize_valid_states()
 
 
-    # with open("learned_reward.txt", "r") as file:
-    #     data = file.read().strip()  # Read and remove extra spaces/newlines
+    with open("learned_reward.txt", "r") as file:
+        data = file.read().strip()  # Read and remove extra spaces/newlines
 
     # # Safely evaluate the array string
-    # lst = ast.literal_eval(data)
+    lst = ast.literal_eval(data)
 
-    # lst = np.array(lst)
+    lst = np.array(lst)
 
-    # # Set the reward in the agent
-    # agent.set_reward(lst)
+    # Set the reward in the agent
+    agent.set_reward(lst)
 
     # with open("state.json", "r") as file:
     #     state = json.load(file)
 
-    agent.generate_transition_matrix()
+    #agent.generate_transition_matrix()
 
-    agent.learn_reward()
+    #agent.learn_reward()
 
-    save_reward(agent.reward)
+    #save_reward(agent.reward)
 
-    plt.subplot(1, 2, 2)
-    plt.pcolor(agent.reward.reshape((19, 23)))
-    plt.colorbar()
-    plt.title("Recovered reward")
-    plt.savefig("reward_graph.png")
+    agent.visualize_reward()
 
 
 
