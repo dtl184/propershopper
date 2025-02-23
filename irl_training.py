@@ -10,7 +10,9 @@ import matplotlib.pyplot as plt
 import torch
 from ltl_agent import LTLAgent
 import ast
-
+import pandas as pd
+import math
+from base_agent import BaseAgent
 def load_trajectories(file_name):
     """
     Reads trajectories from a text file and stores them as a list of lists.
@@ -80,7 +82,10 @@ def main():
 
     #save_reward(agent.reward)
 
-    agent.visualize_reward()
+    #agent.visualize_reward()
+
+    agent = BaseAgent(goal = (3, 18), epsilon=0)
+    agent.qtable = pd.read_json('qtable_base.json')
 
 
 
@@ -88,32 +93,34 @@ def main():
     PORT = args.port
     sock_game = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock_game.connect((HOST, PORT))
-
-    sock_game.send(str.encode("0 RESET"))  
-    state = recv_socket_data(sock_game)
-    state = json.loads(state)
-
     
+    for episode in range(100):
+        sock_game.send(str.encode("0 RESET"))  
+        state = recv_socket_data(sock_game)
+        state = json.loads(state)
+
+        for i in range(100):
+
+            # Agent chooses the next action based on the state
+
+            action_index = agent.choose_action(state)
+
+            for _ in range(6):
+                action = "0 " + agent.action_space[action_index]
+
+                # Send the action to the environment
+                sock_game.send(str.encode(action))
+                next_state = recv_socket_data(sock_game)
+                next_state = json.loads(next_state)
+            
+            x, y = state['observation']['players'][0]['position']
+            if math.sqrt((agent.goal[0] - x) ** 2 + (agent.goal[1] - y) ** 2) <= 1:
+                break
 
 
-    done = False
-    while not done:
-        # Agent chooses the next action based on the state
 
-        action_index = agent.choose_action(state)
-
-        for _ in range(6):
-            action = "0 " + agent.action_space[action_index]
-
-            # Send the action to the environment
-            sock_game.send(str.encode(action))
-            next_state = recv_socket_data(sock_game)
-            next_state = json.loads(next_state)
-
-
-
-        # Update the state
-        state = next_state
+            # Update the state
+            state = next_state
 
     sock_game.close()
     print("Test complete.")

@@ -151,7 +151,7 @@ class IRLAgent:
             next_y = y + dy
 
             next_state_index = self.coord_trans(next_x, next_y)
-            action_rewards.append(self.reward[next_state_index])
+            action_rewards.append(-1 * self.reward[next_state_index])
 
         act = action_rewards.index(max(action_rewards))
 
@@ -169,7 +169,6 @@ class IRLAgent:
         x_index = round(x) - self.x_min
         y_index = round(y) - self.y_min
         return y_index * total_x_values + x_index
-        
 
     def trans(self, state):
         x, y = state['observation']['players'][0]['position']
@@ -321,7 +320,8 @@ class IRLAgent:
                 y_pos = y_extent_min + ((y + self.y_min - 2) / grid_shape[1]) * (y_extent_max - y_extent_min)
 
                 # Get the reward value and corresponding color
-                reward_value = reward_grid[x, y]
+                index = self.coord_trans(x, y)
+                reward_value = self.reward[index]
                 color = cmap(norm(reward_value))
 
                 # Draw colored grid square

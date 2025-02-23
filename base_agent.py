@@ -8,7 +8,7 @@ class BaseAgent:
     A pure Q-learning agent with epsilon-greedy exploration strategy.
     """
 
-    def __init__(self, goal, alpha=0.5, gamma=0.9, epsilon=0.8, mini_epsilon=0.05, decay=0.9999, x_max=19, y_max=24):
+    def __init__(self, goal, alpha=0.5, gamma=0.9, epsilon=0.3, mini_epsilon=0.05, decay=0.9999, x_max=19, y_max=24):
         """
         Initializes the BaseAgent.
 
@@ -46,13 +46,27 @@ class BaseAgent:
         self.y_min = 2
         self.y_max = y_max
 
-    def trans(self, state, granularity=0.15):
+    def trans(self, state, granularity=1):
         """
         Extracts relevant state variables from the current state for learning.
         """
-        player_info = state['observation']['players'][0]
-        position = [int(player_info['position'][0] / granularity) * granularity, int(player_info['position'][1] / granularity) * granularity]
-        return json.dumps({'position': position}, sort_keys=True)
+        x, y = state['observation']['players'][0]['position']
+        total_x_values = self.x_max - self.x_min + 1
+        x_index = round(x) - self.x_min
+        y_index = round(y) - self.y_min
+        state_index = y_index * total_x_values + x_index
+        return json.dumps({'state': state_index}, sort_keys=True)
+    
+    def coord_trans(self, state, granularity=1):
+        """
+        Extracts relevant state variables from the current state for learning.
+        """
+        x, y = state['observation']['players'][0]['position']
+        total_x_values = self.x_max - self.x_min + 1
+        x_index = round(x) - self.x_min
+        y_index = round(y) - self.y_min
+        return y_index * total_x_values + x_index
+
 
     def check_add(self, state):
         """
@@ -95,19 +109,20 @@ class BaseAgent:
         """
         self.check_add(state)
 
-        if np.random.uniform(0, 1) < self.epsilon:
+        if np.random.uniform(0, 1) <= self.epsilon:
             # Explore
             action = random.choice(range(len(self.action_space)))
         else:
             # Exploit
-            q_values = self.qtable.loc[self.trans(state)]
+            state_index = self.trans(state)
+            q_values = self.qtable.loc[state_index, :]
             action = q_values.idxmax()
 
         # Decay epsilon
         if self.epsilon > self.mini_epsilon:
             self.epsilon *= self.decay
 
-        return action
+        return int(action)
 
     def save_qtable(self):
         """Save the Q-table to a JSON file."""

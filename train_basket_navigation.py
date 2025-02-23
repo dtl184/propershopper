@@ -66,6 +66,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '--target_id',
         '-t',
+        default=0,
         type=int,
     )
     args = parser.parse_args()
@@ -130,13 +131,13 @@ if __name__ == "__main__":
                 else:
                     action_index = agent.choose_action(state, goal_y=t[1])
 
-                action = "0 " + action_commands[action_index]
+                for _ in range(6):
+                    action = "0 " + action_commands[action_index]
 
-                # print("Sending action: ", action)
-                sock_game.send(str.encode(action))  # send action to env
-
-                output = recv_socket_data(sock_game)  # get observation from env
-                next_state = json.loads(output)
+                    # Send the action to the environment
+                    sock_game.send(str.encode(action))
+                    next_state = recv_socket_data(sock_game)
+                    next_state = json.loads(next_state)
                 norms = next_state["violations"]
 
                 reward_x, reward_y, reward_norms = calculate_reward(state, next_state, t[0], t[1], norms)  # You need to define this function

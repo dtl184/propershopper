@@ -43,6 +43,16 @@
             "args": [
                 
             ]
+        },
+        {
+            "name": "Base agent traj gen debug",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/base_trajectories_generation.py",
+            "console": "integratedTerminal",
+            "args": [
+                
+            ]
         }
     ]
 }

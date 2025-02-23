@@ -109,7 +109,7 @@ class BasketNaviAgent:
 
     def choose_action(self, state, goal_x = None, goal_y = None):
         self.check_add(state)
-        p = np.random.uniform(0, 1)
+        p = 100#np.random.uniform(0, 1)
         if self.epsilon >= self.mini_epsilon:
             self.epsilon *= self.decay
         if p <= self.epsilon:
