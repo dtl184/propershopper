@@ -14,7 +14,7 @@ class LTLAgent:
     Transitions are obligated the first time they are seen. If a different transition from the same state is seen,
     then that transition and all previously obligated transitions from that state are now permitted.
     """
-    def __init__(self, n_states, goal, alpha=0.5, gamma=0.9, epsilon=0.8, mini_epsilon=0.05, decay=0.9999, x_max=19, y_max=24):
+    def __init__(self, n_states, goal, alpha=0.5, gamma=0.9, epsilon=0.8, mini_epsilon=0.05, decay=0.9999, filename=None, x_max=19, y_max=24):
         """
         Initializes the LTLAgent.
 
@@ -36,7 +36,8 @@ class LTLAgent:
         self.decay = decay
         self.action_space = ['NORTH', 'SOUTH', 'EAST', 'WEST']  
         self.qtable = pd.DataFrame(columns=[i for i in range(len(self.action_space))])
-        self.transitions = {state: (tuple(), tuple()) for state in range(n_states)}
+        self.trajectories = self.load_trajectories(filename)
+        self.transitions = self.learn_from_trajectories()
         self.x_min = 1
         self.x_max = x_max
         self.y_min = 2
@@ -51,6 +52,19 @@ class LTLAgent:
         y = round(state['observation']['players'][0]['position'][1] / granularity) * granularity
         position = (x, y)
         return json.dumps({'position': position}, sort_keys=True)
+    
+    def load_trajectories(self, file_name):
+        """
+        Load trajectories from a text file.
+        """
+        trajectories = []
+        with open(file_name, "r") as file:
+            for line in file:
+                line = line.strip()
+                if line:
+                    trajectory = eval(line)
+                    trajectories.append(trajectory)
+        return trajectories
 
 
 
@@ -78,29 +92,32 @@ class LTLAgent:
             self.qtable.loc[serialized_state] = pd.Series(np.zeros(len(self.action_space)), index=[i for i in range(len(self.action_space))])
     
 
-    def learn_from_trajectories(self, trajectories):
+    def learn_from_trajectories(self):
         """
         Determines what states are obligated/permitted based on agent trajectories.
 
         Args:
             trajectories: A list of agent trajectories, each of which is a list of (state, action) tuples.
         """
-        for trajectory in trajectories:
+        transitions = {state: (tuple(), tuple()) for state in range(self.n_states)}
+        for trajectory in self.trajectories:
             for i in range(len(trajectory) - 1):
                 state_index, action = trajectory[i]
 
 
                 # Get current obligated and permitted transitions
-                obligated, permitted = self.transitions[state_index]
+                obligated, permitted = transitions[state_index]
 
                 # If a new action is observed, update transitions
                 if action not in obligated and action not in permitted:
                     if len(obligated) == 0 and len(permitted) == 0:
                         # No obligated transitions, make this action obligated
-                        self.transitions[state_index] = ((action,), permitted)
+                        transitions[state_index] = ((action,), permitted)
                     else:
                         # Move all obligated to permitted and add the new action
-                        self.transitions[state_index] = (tuple(), obligated + permitted + (action,))
+                        transitions[state_index] = (tuple(), obligated + permitted + (action,))
+
+        return transitions
     
     
     def learning(self, action, state, next_state, reward):
@@ -322,6 +339,25 @@ class LTLAgent:
         plt.yticks([])
         plt.title('Grid Showing Permitted and Obligated Transitions')
         plt.show()
+    
+    def count_transition_states(self):
+        """
+        Counts the number of states with obligated actions, permitted actions, and those with neither.
+        """
+        obligated_count = 0
+        permitted_count = 0
+        neither_count = 0
+
+        for state, (obligated, permitted) in self.transitions.items():
+            if obligated:
+                obligated_count += 1
+            elif permitted:
+                permitted_count += 1
+            else:
+                neither_count += 1
+
+        print(f'Total states: {self.n_states}\n Obligated: {obligated_count}\n Permitted: {permitted_count}\n Limbo: {neither_count}')
+
 
 
 

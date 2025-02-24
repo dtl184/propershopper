@@ -84,8 +84,10 @@ def main():
 
     #agent.visualize_reward()
 
-    agent = BaseAgent(goal = (3, 18), epsilon=0)
-    agent.qtable = pd.read_json('qtable_base.json')
+   # agent = BaseAgent(goal = (3, 18), epsilon=0)
+   # agent.qtable = pd.read_json('qtable_base.json')
+    agent = LTLAgent(n_states=437, goal = (3, 18), epsilon=0, filename='base_trajectories.txt')
+    agent.count_transition_states()
 
 
 
