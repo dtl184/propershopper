@@ -49,7 +49,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=9000, help="Port to connect to the environment")
     parser.add_argument('--episode_length', type=int, default=100, help="Maximum steps per episode")
-    parser.add_argument('--num_experiments', type=int, default=1000, help="Number of experiments to run")
+    parser.add_argument('--num_experiments', type=int, default=10, help="Number of experiments to run")
     parser.add_argument('--num_episodes', type=int, default=1500, help="Number of episodes per experiment")
     args = parser.parse_args()
 

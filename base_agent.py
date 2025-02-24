@@ -1,11 +1,10 @@
 import random
 import numpy as np
-import pandas as pd
 import json
 
 class BaseAgent:
     """
-    A pure Q-learning agent with epsilon-greedy exploration strategy.
+    Optimized Q-learning agent with an epsilon-greedy exploration strategy.
     """
 
     def __init__(self, goal, alpha=0.5, gamma=0.9, epsilon=0.3, mini_epsilon=0.05, decay=0.9999, x_max=19, y_max=24):
@@ -14,8 +13,6 @@ class BaseAgent:
 
         Parameters:
         -----------
-        n_states : int
-            The total number of possible states.
         goal : tuple
             The goal position (x, y).
         alpha : float
@@ -40,62 +37,52 @@ class BaseAgent:
         self.mini_epsilon = mini_epsilon
         self.decay = decay
         self.action_space = ['NORTH', 'SOUTH', 'EAST', 'WEST']
-        self.qtable = pd.DataFrame(columns=[i for i in range(len(self.action_space))])
-        self.x_min = 1
-        self.x_max = x_max
-        self.y_min = 2
-        self.y_max = y_max
+        self.num_actions = len(self.action_space)
+        self.qtable = {}  # ✅ Use dictionary instead of Pandas (faster lookups)
+        self.x_min, self.x_max = 1, x_max
+        self.y_min, self.y_max = 2, y_max
 
-    def trans(self, state, granularity=1):
+    def state_index(self, state):
         """
-        Extracts relevant state variables from the current state for learning.
+        Computes a unique integer index for a given state.
+
+        Returns:
+            int: The computed state index.
         """
         x, y = state['observation']['players'][0]['position']
         total_x_values = self.x_max - self.x_min + 1
-        x_index = round(x) - self.x_min
-        y_index = round(y) - self.y_min
-        state_index = y_index * total_x_values + x_index
-        return json.dumps({'state': state_index}, sort_keys=True)
-    
-    def coord_trans(self, state, granularity=1):
-        """
-        Extracts relevant state variables from the current state for learning.
-        """
-        x, y = state['observation']['players'][0]['position']
-        total_x_values = self.x_max - self.x_min + 1
-        x_index = round(x) - self.x_min
-        y_index = round(y) - self.y_min
-        return y_index * total_x_values + x_index
+        index = (round(y) - self.y_min) * total_x_values + (round(x) - self.x_min)
+        return max(index, 0)
 
-
-    def check_add(self, state):
+    def check_add(self, state_index):
         """
         Ensures the state is in the Q-table, adding it if not present.
 
         Args:
-            state (dict): The state to check and potentially add to the Q-table.
+            state_index (int): The computed state index.
         """
-        serialized_state = self.trans(state)
-        if serialized_state not in self.qtable.index:
-            self.qtable.loc[serialized_state] = pd.Series(np.zeros(len(self.action_space)), index=[i for i in range(len(self.action_space))])
+        if state_index not in self.qtable:
+            self.qtable[state_index] = np.zeros(self.num_actions, dtype=np.float32)  # ✅ Use NumPy for fast operations
 
     def learning(self, action, state, next_state, reward):
         """
         Updates Q-table after the agent receives a reward.
 
         Args:
-            action: The agent's current action.
-            state: The current agent state.
-            next_state: The state obtained after applying the action in the current state.
-            reward: The reward received after performing the action.
+            action (int): The agent's current action.
+            state (dict): The current agent state.
+            next_state (dict): The next agent state.
+            reward (float): The reward received after performing the action.
         """
-        self.check_add(state)
-        self.check_add(next_state)
+        state_idx = self.state_index(state)
+        next_state_idx = self.state_index(next_state)
 
-        q_sa = self.qtable.loc[self.trans(state), action]
-        max_next_q_sa = self.qtable.loc[self.trans(next_state), :].max()
-        new_q_sa = q_sa + self.alpha * (reward + self.gamma * max_next_q_sa - q_sa)
-        self.qtable.loc[self.trans(state), action] = new_q_sa
+        self.check_add(state_idx)
+        self.check_add(next_state_idx)
+
+        q_sa = self.qtable[state_idx][action]
+        max_next_q_sa = np.max(self.qtable[next_state_idx])
+        self.qtable[state_idx][action] += self.alpha * (reward + self.gamma * max_next_q_sa - q_sa)
 
     def choose_action(self, state):
         """
@@ -107,23 +94,30 @@ class BaseAgent:
         Returns:
             int: The chosen action index.
         """
-        self.check_add(state)
+        state_idx = self.state_index(state)
+        self.check_add(state_idx)
 
         if np.random.uniform(0, 1) <= self.epsilon:
-            # Explore
-            action = random.choice(range(len(self.action_space)))
+            action = random.randint(0, self.num_actions - 1)  # ✅ Faster than `random.choice(range(len(self.action_space)))`
         else:
-            # Exploit
-            state_index = self.trans(state)
-            q_values = self.qtable.loc[state_index, :]
-            action = q_values.idxmax()
+            action = np.argmax(self.qtable[state_idx])  # ✅ Faster than Pandas `.idxmax()`
 
         # Decay epsilon
         if self.epsilon > self.mini_epsilon:
             self.epsilon *= self.decay
 
-        return int(action)
+        return action
 
     def save_qtable(self):
-        """Save the Q-table to a JSON file."""
-        self.qtable.to_json('qtable_base.json')
+        """Save the Q-table as a JSON file, converting NumPy arrays to lists."""
+        qtable_serializable = {state: q_values.tolist() for state, q_values in self.qtable.items()}  # ✅ Convert arrays to lists
+        with open('qtable_ltl.json', 'w') as f:
+            json.dump(qtable_serializable, f)  # ✅ Now JSON-serializable
+
+    def load_qtable(self, filename):
+        """Load the Q-table from a JSON file."""
+        try:
+            with open(filename, 'r') as f:
+                self.qtable = {int(k): np.array(v, dtype=np.float32) for k, v in json.load(f).items()}
+        except FileNotFoundError:
+            print("No existing Q-table found. Starting fresh.")

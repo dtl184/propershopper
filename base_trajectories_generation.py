@@ -31,7 +31,7 @@ def calculate_reward(state, next_state, goal=None):
             min_distance = next_distance
             reward = 10
 
-        if curr_distance < 1:  # Tolerance for reaching the goal
+        if curr_distance < 1.2:  # Tolerance for reaching the goal
             reward = 1000
             reached = True
             print("Goal reached!")
@@ -63,7 +63,7 @@ def main():
     args = parser.parse_args()
 
     agent = BaseAgent(goal=(3, 18), epsilon=0)
-    agent.qtable = pd.read_json('qtable_base.json')  # Load the fixed Q-table
+    agent.load_qtable('qtable_base_trained.json')
 
     HOST = '127.0.0.1'
     PORT = args.port
@@ -85,10 +85,11 @@ def main():
         trajectory = []
         cnt = 0
         cur_ep_return = 0
+        
 
         while not state['gameOver']:
             cnt += 1
-            state_index = agent.coord_trans(state)
+            state_index = agent.state_index(state)
             action_index = agent.choose_action(state)
             trajectory.append((state_index, action_index))
 
@@ -110,7 +111,7 @@ def main():
 
         save_trajectory(trajectory)  # Save the episode's trajectory
 
-        print(f"Episode {episode} Reward: {cur_ep_return / max(cnt, 1)}")
+        print(f"Episode {episode} Goal Reached {goal_reached}")
 
     sock_game.close()
 
