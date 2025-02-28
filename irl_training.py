@@ -84,10 +84,10 @@ def main():
 
     #agent.visualize_reward()
 
-   # agent = BaseAgent(goal = (3, 18), epsilon=0)
-   # agent.qtable = pd.read_json('qtable_base.json')
-    agent = LTLAgent(n_states=437, goal = (3, 18), epsilon=0, filename='base_trajectories.txt')
-    agent.count_transition_states()
+    agent = BaseAgent(goal = (3, 18), epsilon=0)
+    agent.load_qtable(filename='qtable_base.json')
+    # agent = LTLAgent(n_states=437, goal = (3, 18), epsilon=0, filename='base_trajectories.txt')
+    # agent.count_transition_states()
 
 
 
@@ -115,8 +115,7 @@ def main():
                 next_state = recv_socket_data(sock_game)
                 next_state = json.loads(next_state)
             
-            x, y = state['observation']['players'][0]['position']
-            if math.sqrt((agent.goal[0] - x) ** 2 + (agent.goal[1] - y) ** 2) <= 1:
+            if agent.state_index(state) in [306, 307, 325, 326]:
                 break
 
 

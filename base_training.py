@@ -8,7 +8,7 @@ from base_agent import BaseAgent  # ✅ Replaced LTLAgent with BaseAgent
 from utils import recv_socket_data
 import os
 
-def calculate_reward(state, next_state, goal=None):
+def calculate_reward(state, next_state=None, goal=None):
     """
     Calculate reward based on distance to the goal.
     """
@@ -16,18 +16,23 @@ def calculate_reward(state, next_state, goal=None):
     reached = False
 
     if goal is not None:
-        curr_position = state['observation']['players'][0]['position']
-        next_position = next_state['observation']['players'][0]['position']
+        # curr_position = state['observation']['players'][0]['position']
+        # next_position = next_state['observation']['players'][0]['position']
 
-        curr_distance = ((round(curr_position[0]) - goal[0]) ** 2 + (round(curr_position[1]) - goal[1]) ** 2) ** 0.5
-        next_distance = ((round(next_position[0]) - goal[0]) ** 2 + (round(next_position[1]) - goal[1]) ** 2) ** 0.5
+        # curr_distance = ((round(curr_position[0]) - goal[0]) ** 2 + (round(curr_position[1]) - goal[1]) ** 2) ** 0.5
+        # next_distance = ((round(next_position[0]) - goal[0]) ** 2 + (round(next_position[1]) - goal[1]) ** 2) ** 0.5
 
-        reward = 0
-
-        if curr_distance < 1.2:  
+        if state in [306, 307, 325, 326]:
             reward = 1000
             reached = True
-            print("Goal reached!")
+            print('Goal Reached!')
+
+        # if curr_distance < 1.2:  
+        #     reward = 1000
+        #     reached = True
+        #     print("Goal reached!")
+
+
 
     return reached, reward - 0.05
 
@@ -84,7 +89,7 @@ def plot_goal_reach_rate(results=None, filename="new_goal_reach_data.txt"):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--port", type=int, default=8000, help="Port to connect to the environment")
+    parser.add_argument("--port", type=int, default=9000, help="Port to connect to the environment")
     parser.add_argument("--num_experiments", type=int, default=100, help="Number of experiments to run")
     parser.add_argument("--num_episodes", type=int, default=2500, help="Number of episodes per experiment")
     parser.add_argument("--episode_length", type=int, default=100, help="Maximum steps per episode")
@@ -131,7 +136,7 @@ def main():
                     break
 
                 # Check if goal was reached
-                goal_reached, reward = calculate_reward(state, next_state, agent.goal)
+                goal_reached, reward = calculate_reward(agent.state_index(state), next_state, agent.goal)
                 if goal_reached:
                     goal_reached_flag = 1
                     break  # Stop early if goal is reached
@@ -151,14 +156,14 @@ def main():
         experiment_durations.append(experiment_time)
         print(f"Experiment {experiment + 1} completed in {experiment_time:.2f} seconds")
     
-    agent.save_qtable()
+    #agent.save_qtable()
 
     sock_game.close()
 
     # Save results
     
-    save_goal_reach_data(all_experiment_results)
-    plot_goal_reach_rate(all_experiment_results)
+    #save_goal_reach_data(all_experiment_results)
+    #plot_goal_reach_rate(all_experiment_results)
 
     # Compute and print average time per experiment
     avg_experiment_time = np.mean(experiment_durations)

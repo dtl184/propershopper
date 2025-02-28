@@ -211,7 +211,7 @@ def record_trajectory(state, action, filename="trajectories_new.txt", first=Fals
 
     cur_state = trans(state)
 
-    print(f'Current state index: {cur_state}\n')
+    #print(f'Current state index: {cur_state}\n')
 
     # with open(filename, "a") as file:
     #     if first and not first_written:
@@ -417,27 +417,27 @@ if __name__ == "__main__":
     norms = [CartTheftNorm(),
              BasketTheftNorm(),
              WrongShelfNorm(),
-             ShopliftingNorm(),
+             ShopliftingNorm(), # x
              PlayerCollisionNorm(),
-             ObjectCollisionNorm(),
-             WallCollisionNorm(),
+             ObjectCollisionNorm(), # x
+             WallCollisionNorm(), # x
              BlockingExitNorm(),
              EntranceOnlyNorm(),
-             UnattendedCartNorm(),
-             UnattendedBasketNorm(),
+             UnattendedCartNorm(), 
+             UnattendedBasketNorm(), # x
              OneCartOnlyNorm(),
-             OneBasketOnlyNorm(),
+             OneBasketOnlyNorm(), # x
              PersonalSpaceNorm(dist_threshold=1),
              InteractionCancellationNorm(),
              LeftWithBasketNorm(),
-             ReturnBasketNorm(),
+             ReturnBasketNorm(), #x
              ReturnCartNorm(),
              WaitForCheckoutNorm(),
              # ItemTheftFromCartNorm(),
              # ItemTheftFromBasketNorm(),
-             AdhereToListNorm(),
-             TookTooManyNorm(),
-             BasketItemQuantNorm(basket_max=6),
+             AdhereToListNorm(), # x
+             TookTooManyNorm(), # x
+             BasketItemQuantNorm(basket_max=6), # x
              CartItemQuantNorm(cart_min=6),
              UnattendedCheckoutNorm()
              ]

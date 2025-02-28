@@ -38,7 +38,7 @@ def preprocess_sequences(sequences):
 
 def cluster_sequences(sequences):
     sequences = preprocess_sequences(sequences)
-    sequences = TimeSeriesScalerMeanVariance().fit_transform(sequences)  # Normalize sequences
+    sequences = TimeSeriesScalerMeanVariance().fit_transform(sequences)  
     
     clusterer = hdbscan.HDBSCAN(metric='euclidean', min_cluster_size=5)
     labels = clusterer.fit_predict(sequences.reshape(len(sequences), -1))
@@ -51,13 +51,12 @@ def visualize_clusters(labels, sequences):
     grid_width = 19
     grid_height = 23
     
-    # Assign colors to clusters
     colormap = plt.get_cmap("tab10")
     cluster_colors = {cluster: colormap(i % 10) for i, cluster in enumerate(unique_clusters) if cluster != -1}
     
     for label, sequence in zip(labels, sequences):
         if label == -1:
-            continue  # Ignore noise points
+            continue 
         
         for state_action in sequence:
             state = int(state_action[0])
@@ -65,7 +64,6 @@ def visualize_clusters(labels, sequences):
                 state_colors[state] = []
             state_colors[state].append(cluster_colors[label])
     
-    # Generate grid visualization
     fig, ax = plt.subplots(figsize=(10, 10))
     for state, colors in state_colors.items():
         x = state % grid_width  # Column index

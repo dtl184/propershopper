@@ -36,7 +36,7 @@ class BaseAgent:
         self.epsilon = epsilon
         self.mini_epsilon = mini_epsilon
         self.decay = decay
-        self.action_space = ['NORTH', 'SOUTH', 'EAST', 'WEST']
+        self.action_space = ['NORTH', 'SOUTH', 'EAST', 'WEST', 'INTERACT']
         self.num_actions = len(self.action_space)
         self.qtable = {}  # ✅ Use dictionary instead of Pandas (faster lookups)
         self.x_min, self.x_max = 1, x_max
