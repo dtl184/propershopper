@@ -53,6 +53,16 @@
             "args": [
                 
             ]
+        },
+        {
+            "name": "Hybrid Shopping debug",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/shopping_training.py",
+            "console": "integratedTerminal",
+            "args": [
+                
+            ]
         }
     ]
 }

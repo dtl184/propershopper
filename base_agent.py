@@ -7,7 +7,7 @@ class BaseAgent:
     Optimized Q-learning agent with an epsilon-greedy exploration strategy.
     """
 
-    def __init__(self, goal, alpha=0.5, gamma=0.9, epsilon=0.3, mini_epsilon=0.05, decay=0.9999, x_max=19, y_max=24):
+    def __init__(self, goal=None, alpha=0.5, gamma=0.9, epsilon=0.3, mini_epsilon=0.05, decay=0.9999, x_max=19, y_max=24):
         """
         Initializes the BaseAgent.
 
@@ -100,13 +100,20 @@ class BaseAgent:
         if np.random.uniform(0, 1) <= self.epsilon:
             action = random.randint(0, self.num_actions - 1)  # ✅ Faster than `random.choice(range(len(self.action_space)))`
         else:
-            action = np.argmax(self.qtable[state_idx])  # ✅ Faster than Pandas `.idxmax()`
+            q_values = self.qtable[state_idx]
+            if np.all(q_values == 0):  # If all Q-values are zero, pick a random action
+                action = random.randint(0, self.num_actions - 1)
+            else:
+                action = np.argmax(q_values) # ✅ Faster than Pandas `.idxmax()`
 
         # Decay epsilon
         if self.epsilon > self.mini_epsilon:
             self.epsilon *= self.decay
 
         return action
+    
+    def reset_qtable(self):
+        self.qtable = {}
 
     def save_qtable(self):
         """Save the Q-table as a JSON file, converting NumPy arrays to lists."""

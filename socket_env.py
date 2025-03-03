@@ -211,7 +211,7 @@ def record_trajectory(state, action, filename="trajectories_new.txt", first=Fals
 
     cur_state = trans(state)
 
-    #print(f'Current state index: {cur_state}\n')
+    print(f'Current state index: {cur_state}\n')
 
     # with open(filename, "a") as file:
     #     if first and not first_written:
@@ -307,6 +307,16 @@ obj_pos_dict = {
 
     'checkout': [1, 4.5]
 } 
+
+# state indices corresponding to these objs
+obj_state_index_dict = {
+
+    'basket': [306, 307, 325, 326],
+    'chicken': [182, 183, 144, 145],
+    'letuce': [336, 337, 298, 299]
+
+
+}
 
 
 if __name__ == "__main__":

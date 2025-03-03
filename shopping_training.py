@@ -1,16 +1,15 @@
-# Scripts for training basket agents
-
 import json
 import random
 import socket
-
 import gymnasium as gym
+import numpy as np
+import matplotlib.pyplot as plt
 from env import SupermarketEnv
 from utils import recv_socket_data
-
-from Q_Learning_agent import QLAgent  # Make sure to import your QLAgent class 
+from base_agent import BaseAgent
 from planner import HyperPlanner
 from get_obj_agent import GetObjAgent
+from socket_env import obj_pos_dict, obj_state_index_dict
 from constants import *
 import pickle
 import pandas as pd
@@ -18,151 +17,159 @@ import argparse
 from termcolor import colored
 
 def euclidean_distance(pos1, pos2):
-    # Calculate Euclidean distance between two points
-    return ((pos1[0] - pos2[0])**2 + (pos1[1] - pos2[1])**2)**0.5 
+    return ((pos1[0] - pos2[0])**2 + (pos1[1] - pos2[1])**2)**0.5
 
-inventory = {} 
+inventory = {}
 payed_items = {}
 
 def init_inventory():
     for i in obj_list:
-        inventory[i] = 0 
+        inventory[i] = 0
         payed_items[i] = 0
 
-def calculate_reward(previous_state, current_state, target, task):
-    if task == 'navigate': 
-        return None 
-    norm_penalty = -50
-    target_location = obj_pos_dict[target] 
+def calculate_reward(previous_state, current_state, target, task, index):
+    reached = False
+    global min_distance
 
-    if task == 'get':
-        if len(current_state['violations']) != 0:
-            #print(f'violated norm: {current_state['violations']}')
-            return norm_penalty
+    if task == 'navigate':
         prev_player = previous_state['observation']['players'][0]
         curr_player = current_state['observation']['players'][0]
+        target_pos = obj_pos_dict[target]
+        prev_dist = euclidean_distance(prev_player['position'], target_pos)
+        curr_dist = euclidean_distance(curr_player['position'], target_pos)
+        dist_gain = prev_dist - curr_dist
 
-        prev_dist = euclidean_distance(prev_player['position'], target_location) 
-        curr_dist = euclidean_distance(curr_player['position'], target_location) 
+        if curr_dist < min_distance:
+            min_distance = curr_dist
+            return reached, 10
 
-        dist_gain = prev_dist - curr_dist 
-        if target == 'basket': 
-            if len(current_state['observation']['carts']) != 0:
-                return -600
+        if index in obj_state_index_dict[target]:
+            reached = True
+            return reached, 100
+        
+        return reached, -1
+
+    if task == 'get':
+        if target == 'basket':
             if len(current_state['observation']['baskets']) != 0:
-                return 100 
+                reached = True
+                return reached, 100
         else:
-            # the agent is guaranteed to have a basket by this point
-            basket_contents = current_state['observation']['baskets'][0]['contents'] 
-            for i, b in enumerate(basket_contents):
-                basket_contents[i] = b.replace(' ', '_')
+            basket_contents = current_state['observation']['baskets'][0]['contents']
             if target in basket_contents:
-                target_id = basket_contents.index(target) 
-                cur_num = current_state['observation']['baskets'][0]['contents_quant'][target_id] 
-                # print(cur_num)
-                if cur_num > inventory[target]:
-                    inventory[target] = cur_num
-                    return 100
+                target_id = basket_contents.index(target)
+                if current_state['observation']['baskets'][0]['contents_quant'][target_id] > 0:
+                    reached = True
+                    return reached, 100
 
-        return dist_gain-0.0001
+        return reached, -1
     
     if task == 'pay':
-        if len(current_state['violations']) != 0:
-            #print(f'violated norm: {current_state['violations']}')
-            return norm_penalty 
-        if len(current_state['observation']['baskets'][0]['purchased_contents']) != 0: 
-            return 100 # Basket agent check out is guaranteed to be successful
-        return 0 # Sparse reward since checkout position is fixed and extremely easy 
+        if len(current_state['observation']['baskets'][0]['purchased_contents']) != 0:
+            reached = True
+            print('Paid for items!')
+            return reached, 100
+        return reached, 0
 
-special_food_list = ['prepared_foods', 'fresh_fish']
+def plot_results(subgoals_reached, plan_completion_rates):
+    plt.figure(figsize=(10, 5))
+    plt.plot(subgoals_reached, label="Avg Subgoals Reached per Episode", marker='o')
+    plt.xlabel("Experiment")
+    plt.ylabel("Avg Subgoals Reached")
+    plt.title("Subgoal Completion Across Experiments")
+    plt.legend()
+    plt.grid()
+    plt.savefig("subgoals_reached.png")
+    
+    plt.figure(figsize=(10, 5))
+    plt.plot(plan_completion_rates, label="Avg Plan Completion Rate", marker='o', color='r')
+    plt.xlabel("Experiment")
+    plt.ylabel("Plan Completion Rate")
+    plt.title("Plan Completion Rate Across Experiments")
+    plt.legend()
+    plt.grid()
+    plt.savefig("plan_completion_rate.png")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=9000, help="Port to connect to the environment")
-    parser.add_argument('--episode_length', type=int, default=100, help="Maximum steps per episode")
     parser.add_argument('--num_experiments', type=int, default=10, help="Number of experiments to run")
     parser.add_argument('--num_episodes', type=int, default=1500, help="Number of episodes per experiment")
+    parser.add_argument('--subgoal_time', type=int, default=100, help="Number of time steps per subgoal")
     args = parser.parse_args()
 
-    planner = HyperPlanner(obj_list)
-    
-    # Connect to Supermarket
     HOST = '127.0.0.1'
     PORT = args.port
     sock_game = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock_game.connect((HOST, PORT)) 
+    sock_game.connect((HOST, PORT))
 
-    training_time = 100
-    episode_length = 800
-    for i in range(1, training_time+1):
-        # start = False 
-        planner.reset()
-
-        sock_game.send(str.encode("0 RESET"))  # reset the game
-
-        state = recv_socket_data(sock_game)
-        state = json.loads(state)
-        planner.parse_shopping_list(state)
-        agent = planner.get_agent()
-
-        print(f'Current Plan: {planner.plan}')
-        init_inventory()
-        while not planner.plan_finished(): 
-            done = False
-            cnt = 0
-            current_task = planner.get_task() 
-            print(f'Current Task: {current_task}')
-            while not done:
-                cnt += 1
-                action_index, finish = agent.choose_action(state)
-                action = "0 " + agent.action_commands[action_index] 
-                # print(action)
-                sock_game.send(str.encode(action))  # send action to env 
-
-                next_state = recv_socket_data(sock_game)  # get observation from env
-                # fill with random state if state is empty
-                next_state = json.loads(next_state) 
-                if action == '0 INTERACT' and current_task.split()[0] == 'get':
-                    sock_game.send(str.encode(action))  # remove dialogue box 
-                    next_state = recv_socket_data(sock_game)  # get observation from env
-                    next_state = json.loads(next_state) 
-                    if current_task.split()[1] in special_food_list:
-                        sock_game.send(str.encode(action))  # remove dialogue box 
-                        next_state = recv_socket_data(sock_game)  # get observation from env
-                        next_state = json.loads(next_state) 
-
-                if action == '0 INTERACT' and current_task.split()[0] == 'pay':
-                    sock_game.send(str.encode(action))
-                    next_state = recv_socket_data(sock_game)  # get observation from env
-                    next_state = json.loads(next_state) 
-                    sock_game.send(str.encode('0 INTERACT'))  # remove dialogue box 
-                    next_state = recv_socket_data(sock_game)  # get observation from env
-                    next_state = json.loads(next_state) 
-                # if next_state['observation']['players'][0]['position'][0] < 0 and abs(next_state['observation']['players'][0]['position'][1] - exit_pos[1]) < 1:
-                #     next_state['gameOver'] = True
-
-                # Define the reward based on the state and next_state
-                reward = calculate_reward(state, next_state, target=current_task.split()[1], task=current_task.split()[0])  # You need to define this function 
-                if reward == 100 or finish:
-                    print("Success!") 
-                    done = True 
-                    # print(state['observation']['players'][0])
-
-                agent.learning(action_index, reward, state, next_state)
-
-                # Update state
-                state = next_state
-
-                if cnt > episode_length:
-                    print("\nepisode count exceeded\n")
-                    break
-            agent.save_qtables()
-            if not done:
-                break # mission failed. Restart everything 
-            else:
-                planner.update() 
-                agent = planner.get_agent() 
+    all_subgoals_reached = []
+    all_plan_completion_rates = []
+    
+    for experiment in range(args.num_experiments):
+        print(f'Starting experiment {experiment}\n')
+        planner = HyperPlanner(obj_list, agent_class=BaseAgent)
+        experiment_subgoals = []
+        experiment_plan_completions = []
+        
+        for episode in range(args.num_episodes):
+            planner.reset()
+            sock_game.send(str.encode("0 RESET"))
+            state = recv_socket_data(sock_game)
+            state = json.loads(state)
+            planner.plan = ['navigate basket', 'get basket', 'navigate chicken', 'get chicken', 'navigate lettuce', 'get lettuce', 'navigate checkout', 'pay checkout', 'navigate exit']
+            
+            subgoals_completed = 0
+            global min_distance
+            min_distance = 1000
+            while not planner.plan_finished():
+                agent = planner.get_agent()
                 if agent is None:
-                    print(colored('Whole task succeeded', 'green'))
-    sock_game.close()
+                    break
+                planner.change_qtable()  # Ensure correct Q-table is used
+                
+                print(f"Experiment {experiment} Episode {episode} Current Task: {planner.get_task()}")
+                steps = 0
+                goal_reached = False
+                
+                while steps < 100 and not goal_reached:
+                    steps += 1
+                    action_index = agent.choose_action(state)
+                    action = "0 " + agent.action_space[action_index]
+                    num = 6 if action_index <= 3 else 1
 
+                    for _ in range(num):  
+                        action = "0 " + agent.action_space[action_index]
+                        sock_game.send(str.encode(action))
+                        next_state = recv_socket_data(sock_game)
+                        next_state = json.loads(next_state) if next_state else None
+
+                    goal_reached, reward = calculate_reward(state,
+                                                            next_state,
+                                                            target=planner.get_task().split()[1],
+                                                            task=planner.get_task().split()[0],
+                                                            index=agent.state_index(state))
+                    agent.learning(action_index, state, next_state, reward)
+                    state = next_state
+                
+                # if the subgoal was just reached, continue plan. Otherwise restart episode
+                if goal_reached:
+                    print('Subgoal reached!')
+                    subgoals_completed += 1
+                    planner.update()
+                else:
+                    break 
+
+                if planner.plan_finished():
+                    print('Plan completed!\n')
+
+                
+            
+            experiment_subgoals.append(subgoals_completed)
+            experiment_plan_completions.append(int(planner.plan_finished()))
+        
+        all_subgoals_reached.append(np.mean(experiment_subgoals))
+        all_plan_completion_rates.append(np.mean(experiment_plan_completions))
+    
+    plot_results(all_subgoals_reached, all_plan_completion_rates)
+    sock_game.close()
