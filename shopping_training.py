@@ -15,12 +15,21 @@ import pickle
 import pandas as pd
 import argparse
 from termcolor import colored
-
+import logging
+import os
 def euclidean_distance(pos1, pos2):
     return ((pos1[0] - pos2[0])**2 + (pos1[1] - pos2[1])**2)**0.5
 
 inventory = {}
 payed_items = {}
+
+logging.basicConfig(
+    filename='shopping.log',
+    filemode='w',  # Overwrites the log file each time. Use 'a' to append.
+    level=logging.DEBUG,  # Capture all levels (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    force=True  # Ensures previous configurations don’t interfere
+)
 
 def init_inventory():
     for i in obj_list:
@@ -55,6 +64,8 @@ def calculate_reward(previous_state, current_state, target, task, index):
                 reached = True
                 return reached, 100
         else:
+            if len(current_state['observation']['baskets']) == 0:
+                return reached, -5
             basket_contents = current_state['observation']['baskets'][0]['contents']
             if target in basket_contents:
                 target_id = basket_contents.index(target)
@@ -65,9 +76,10 @@ def calculate_reward(previous_state, current_state, target, task, index):
         return reached, -1
     
     if task == 'pay':
+        if len(current_state['observation']['baskets']) == 0:
+            return reached, -5
         if len(current_state['observation']['baskets'][0]['purchased_contents']) != 0:
             reached = True
-            print('Paid for items!')
             return reached, 100
         return reached, 0
 
@@ -93,9 +105,9 @@ def plot_results(subgoals_reached, plan_completion_rates):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=9000, help="Port to connect to the environment")
-    parser.add_argument('--num_experiments', type=int, default=10, help="Number of experiments to run")
-    parser.add_argument('--num_episodes', type=int, default=1500, help="Number of episodes per experiment")
-    parser.add_argument('--subgoal_time', type=int, default=100, help="Number of time steps per subgoal")
+    parser.add_argument('--num_experiments', type=int, default=1, help="Number of experiments to run")
+    parser.add_argument('--num_episodes', type=int, default=100, help="Number of episodes per experiment")
+    parser.add_argument('--subgoal_time', type=int, default=300, help="Number of time steps per subgoal")
     args = parser.parse_args()
 
     HOST = '127.0.0.1'
@@ -107,7 +119,7 @@ if __name__ == "__main__":
     all_plan_completion_rates = []
     
     for experiment in range(args.num_experiments):
-        print(f'Starting experiment {experiment}\n')
+        logging.info(f'Starting experiment {experiment}\n')
         planner = HyperPlanner(obj_list, agent_class=BaseAgent)
         experiment_subgoals = []
         experiment_plan_completions = []
@@ -117,8 +129,8 @@ if __name__ == "__main__":
             sock_game.send(str.encode("0 RESET"))
             state = recv_socket_data(sock_game)
             state = json.loads(state)
-            planner.plan = ['navigate basket', 'get basket', 'navigate chicken', 'get chicken', 'navigate lettuce', 'get lettuce', 'navigate checkout', 'pay checkout', 'navigate exit']
-            
+            planner.parse_shopping_list(state)     
+
             subgoals_completed = 0
             global min_distance
             min_distance = 1000
@@ -126,9 +138,17 @@ if __name__ == "__main__":
                 agent = planner.get_agent()
                 if agent is None:
                     break
-                planner.change_qtable()  # Ensure correct Q-table is used
+                #planner.change_qtable()  # Ensure correct Q-table is used
+
+                task_name = planner.get_task().replace(" ", "_")
                 
-                print(f"Experiment {experiment} Episode {episode} Current Task: {planner.get_task()}")
+                # qtable_path = os.path.join("hybrid_shopping_qtables", f"qtable_{task_name}.json")
+                # if os.path.exists(qtable_path):
+                #     agent.load_qtable(qtable_path)
+                # else:
+                #     continue
+                
+                logging.info(f"Experiment {experiment} Episode {episode} Current Task: {planner.get_task()}")
                 steps = 0
                 goal_reached = False
                 
@@ -154,14 +174,14 @@ if __name__ == "__main__":
                 
                 # if the subgoal was just reached, continue plan. Otherwise restart episode
                 if goal_reached:
-                    print('Subgoal reached!')
+                    #logging.info('Subgoal reached!')
                     subgoals_completed += 1
                     planner.update()
                 else:
                     break 
 
                 if planner.plan_finished():
-                    print('Plan completed!\n')
+                    logging.info('Plan completed!\n')
 
                 
             
@@ -170,6 +190,8 @@ if __name__ == "__main__":
         
         all_subgoals_reached.append(np.mean(experiment_subgoals))
         all_plan_completion_rates.append(np.mean(experiment_plan_completions))
+
+    planner.save_qtables()
     
     plot_results(all_subgoals_reached, all_plan_completion_rates)
     sock_game.close()

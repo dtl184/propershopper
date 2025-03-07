@@ -3,10 +3,10 @@ import pandas as pd
 import torch
 import torch.nn.functional as F
 import json
+import os
 from base_agent import BaseAgent
 from get_obj_agent import GetObjAgent
 from checkout_agent import CheckoutAgent
-
 
 class HyperPlanner:
     '''
@@ -19,6 +19,8 @@ class HyperPlanner:
         self.current_goal_id = 0
         self.plan = None 
         self.use_cart = False 
+        self.qtable_dir = "hybrid_shopping_qtables/"
+        os.makedirs(self.qtable_dir, exist_ok=True)
 
     def reset(self):
         self.current_goal_id = 0
@@ -71,3 +73,19 @@ class HyperPlanner:
             if qtable_key not in self.qtables:
                 self.qtables[qtable_key] = {}  # Store Q-table in memory
             self.agent.qtable = self.qtables[qtable_key]
+    
+    def save_qtables(self):
+        for key, qtable in self.qtables.items():
+            filename = os.path.join(self.qtable_dir, f"qtable_{key}.json")
+            qtable_serializable = {state: q_values.tolist() for state, q_values in qtable.items()}  # Convert to lists
+            print('Saving qtables\n')
+            with open(filename, "w") as f:
+                json.dump(qtable_serializable, f)
+
+    
+    def load_qtables(self):
+        for filename in os.listdir(self.qtable_dir):
+            if filename.startswith("qtable_") and filename.endswith(".json"):
+                key = filename[len("qtable_"):-len(".json")]
+                with open(os.path.join(self.qtable_dir, filename), "r") as f:
+                    self.qtables[key] = {int(state): np.array(q_values, dtype=np.float32) for state, q_values in json.load(f).items()}

@@ -5,6 +5,16 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Shopping traj gen debug",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/shopping_trajectory_gen.py",
+            "console": "integratedTerminal",
+            "args": [
+
+            ]
+        },
+        {
             "name": "LTL training debug",
             "type": "debugpy",
             "request": "launch",
