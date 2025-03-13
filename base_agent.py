@@ -102,7 +102,7 @@ class BaseAgent:
         else:
             q_values = self.qtable[state_idx]
             if np.all(q_values == 0):  # If all Q-values are zero, pick a random action
-                action = random.randint(0, self.num_actions - 1)
+                action = random.choice(range(len(self.action_space)))
             else:
                 action = np.argmax(q_values) # ✅ Faster than Pandas `.idxmax()`
 

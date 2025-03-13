@@ -270,12 +270,12 @@ obj_pos_dict = {
 
     # milk
     'milk': [5.5, 1.5],
-    'chocolate milk': [9.5, 1.5],
-    'strawberry milk': [13.5, 1.5], 
+    'chocolate_milk': [9.5, 1.5],
+    'strawberry_milk': [13.5, 1.5], 
 
     # fruit
-    'apple': [5.5, 5.5],
-    'orange': [7.5, 5.5],
+    'apples': [5.5, 5.5],
+    'oranges': [7.5, 5.5],
     'banana': [9.5, 5.5],
     'strawberry': [11.5, 5.5],
     'raspberry': [13.5, 5.5],
@@ -287,14 +287,14 @@ obj_pos_dict = {
     'ham': [13.5, 9.5], 
 
     # cheese
-    'brie cheese': [5.5, 13.5],
-    'swiss cheese': [7.5, 13.5],
-    'cheese wheel': [9.5, 13.5], 
+    'brie_cheese': [5.5, 13.5],
+    'swiss_cheese': [7.5, 13.5],
+    'cheese_wheel': [9.5, 13.5], 
 
     # veggie 
     'garlic': [5.5, 17.5], 
     'leek': [7.5, 17.5], 
-    'red bell pepper': [9.5, 17.5], 
+    'red_bell_pepper': [9.5, 17.5], 
     'carrot': [11.5, 17.5],
     'lettuce': [13.5, 17.5], 
 
@@ -302,7 +302,7 @@ obj_pos_dict = {
     'avocado': [5.5, 21.5],
     'broccoli': [7.5, 21.5],
     'cucumber': [9.5, 21.5],
-    'yellow bell pepper': [11.5, 21.5], 
+    'yellow_bell_pepper': [11.5, 21.5], 
     'onion': [13.5, 21.5], 
 
     'checkout': [1, 4.5]

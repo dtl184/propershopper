@@ -14,7 +14,7 @@ class LTLAgent:
     Transitions are obligated the first time they are seen. If a different transition from the same state is seen,
     then that transition and all previously obligated transitions from that state are now permitted.
     """
-    def __init__(self, n_states, goal=(0,0), alpha=0.5, gamma=0.9, epsilon=0.8, mini_epsilon=0.05, decay=0.9999, traj_filename=None, x_max=19, y_max=24):
+    def __init__(self, n_states, goal, alpha=0.5, gamma=0.9, epsilon=0.8, mini_epsilon=0.05, decay=0.9999, filename=None, x_max=19, y_max=24):
         """
         Initializes the LTLAgent.
 
@@ -36,7 +36,7 @@ class LTLAgent:
         self.decay = decay
         self.action_space = ['NORTH', 'SOUTH', 'EAST', 'WEST']  
         self.qtable = pd.DataFrame(columns=[i for i in range(len(self.action_space))])
-        self.trajectories = self.load_trajectories(traj_filename)
+        self.trajectories = self.load_trajectories(filename)
         self.transitions = self.learn_from_trajectories()
         self.x_min = 1
         self.x_max = x_max
@@ -245,6 +245,18 @@ class LTLAgent:
         x_index = round(x / granularity) - round(self.x_min / granularity)
         y_index = round(y / granularity) - round(self.y_min / granularity)
         return y_index * total_x_values + x_index
+
+    def state_index(self, state):
+        """
+        Computes a unique integer index for a given state.
+
+        Returns:
+            int: The computed state index.
+        """
+        x, y = state['observation']['players'][0]['position']
+        total_x_values = self.x_max - self.x_min + 1
+        index = (round(y) - self.y_min) * total_x_values + (round(x) - self.x_min)
+        return max(index, 0)
     
     def visualize(self):
         """
@@ -359,82 +371,6 @@ class LTLAgent:
         print(f'Total states: {self.n_states}\n Obligated: {obligated_count}\n Permitted: {permitted_count}\n Limbo: {neither_count}')
 
 
-    def visualize_valid_states(
-        self, filename="valid_states.txt", image_path="map.png", grid_shape=(19, 23), 
-        x_offset=13, y_offset=52
-    ):
-        try:
-            with open(filename, "r") as f:
-                state_list = json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
-            print("Error: valid_states.txt not found or corrupted.")
-            return
-
-        if len(state_list) != grid_shape[0] * grid_shape[1]:
-            print("Error: Data size does not match expected grid dimensions.")
-            return
-
-        state_grid = np.array(state_list).reshape(grid_shape)
-
-        try:
-            img = mpimg.imread(image_path)
-            img_height, img_width, _ = img.shape
-        except FileNotFoundError:
-            print("Error: The file map.png was not found.")
-            return
-
-        x_extent_min = x_offset / img_width * grid_shape[0]
-        x_extent_max = (img_width - x_offset) / img_width * grid_shape[0]
-        y_extent_min = y_offset / img_height * grid_shape[1]
-        y_extent_max = (img_height - x_offset) / img_height * grid_shape[1]
-
-        fig, ax = plt.subplots(figsize=(10, 10))
-        ax.imshow(img, extent=[0, grid_shape[0], grid_shape[1], 0], aspect='auto', zorder=0)
-
-        obligated_actions = {k: v[0] for k, v in self.transitions.items() if v[0]}
-        permitted_actions = {k: v[1] for k, v in self.transitions.items() if v[1]}
-
-        action_dirs = {'NORTH': (0, -0.3), 'SOUTH': (0, 0.3), 'EAST': (0.3, 0), 'WEST': (-0.3, 0)}
-
-        for x in range(grid_shape[0]):
-            for y in range(grid_shape[1]):
-                x_pos = x_extent_min + ((x + self.x_min - 1) / grid_shape[0]) * (x_extent_max - x_extent_min)
-                y_pos = y_extent_min + ((y + self.y_min - 2) / grid_shape[1]) * (y_extent_max - y_extent_min)
-                index = self.coords_to_state(x + self.x_min, y + self.y_min)
-
-                if index in [189, 208, 94]:
-                    color = "black"
-                elif index in [306, 307, 325, 326]:
-                    color = "green"
-                elif state_list[index] == 1 or index == 93:
-                    color = "white"
-                else:
-                    color = "black"
-                ax.add_patch(plt.Rectangle((x_pos, y_pos), 1, 1, color=color, alpha=0.7, zorder=1))
-
-                for action in obligated_actions.get(index, []):
-                    dx, dy = action_dirs[self.action_space[action]]
-                    ax.arrow(x_pos + 0.5, y_pos + 0.5, dx, dy, head_width=0.1, head_length=0.1, fc='black', ec='black', zorder=3)
-
-                for action in permitted_actions.get(index, []):
-                    dx, dy = action_dirs[self.action_space[action]]
-                    ax.arrow(x_pos + 0.5, y_pos + 0.5, dx, dy, head_width=0.1, head_length=0.1, fc='gray', ec='gray', zorder=2)
-
-        for x in range(grid_shape[0] + 1):
-            x_pos = x_extent_min + ((x + self.x_min - 1) / grid_shape[0]) * (x_extent_max - x_extent_min)
-            ax.axvline(x_pos, color='gray', linewidth=0.5, zorder=2)
-
-        for y in range(grid_shape[1] + 1):
-            y_pos = y_extent_min + ((y + self.y_min - 2) / grid_shape[1]) * (y_extent_max - y_extent_min)
-            ax.axhline(y_pos, color='gray', linewidth=0.5, zorder=2)
-
-        ax.set_xlim(0, grid_shape[0])
-        ax.set_ylim(grid_shape[1], 0)
-        ax.set_xticks([])
-        ax.set_yticks([])
-        ax.set_title('Valid States Overlayed on Map with Transitions')
-
-        plt.savefig('valid_states_grid_2.png', dpi=300, bbox_inches='tight')
 
 
 

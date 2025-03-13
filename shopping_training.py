@@ -105,8 +105,8 @@ def plot_results(subgoals_reached, plan_completion_rates):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=9000, help="Port to connect to the environment")
-    parser.add_argument('--num_experiments', type=int, default=1, help="Number of experiments to run")
-    parser.add_argument('--num_episodes', type=int, default=100, help="Number of episodes per experiment")
+    parser.add_argument('--num_experiments', type=int, default=10, help="Number of experiments to run")
+    parser.add_argument('--num_episodes', type=int, default=100000, help="Number of episodes per experiment")
     parser.add_argument('--subgoal_time', type=int, default=300, help="Number of time steps per subgoal")
     args = parser.parse_args()
 
@@ -138,7 +138,7 @@ if __name__ == "__main__":
                 agent = planner.get_agent()
                 if agent is None:
                     break
-                #planner.change_qtable()  # Ensure correct Q-table is used
+                planner.change_qtable()  # Ensure correct Q-table is used
 
                 task_name = planner.get_task().replace(" ", "_")
                 
@@ -191,7 +191,7 @@ if __name__ == "__main__":
         all_subgoals_reached.append(np.mean(experiment_subgoals))
         all_plan_completion_rates.append(np.mean(experiment_plan_completions))
 
-    planner.save_qtables()
+    #planner.save_qtables()
     
     plot_results(all_subgoals_reached, all_plan_completion_rates)
     sock_game.close()

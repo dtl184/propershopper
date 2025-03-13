@@ -70,7 +70,7 @@ def calculate_reward(previous_state, current_state, target, task, index):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=9000, help="Port to connect to the environment")
-    parser.add_argument('--num_trajectories', type=int, default=1000, help="Number of trajectories to generate")
+    parser.add_argument('--num_trajectories', type=int, default=10, help="Number of trajectories to generate")
     args = parser.parse_args()
 
     HOST = '127.0.0.1'
@@ -90,16 +90,20 @@ if __name__ == "__main__":
         sock_game.send(str.encode("0 RESET"))
         state = recv_socket_data(sock_game)
         state = json.loads(state)
-        planner.plan = ['navigate basket', 'get basket', 'navigate chicken', 'get chicken', 'navigate lettuce', 'get lettuce', 'navigate checkout', 'pay checkout', 'navigate exit']
-        
+
+
+        planner.parse_shopping_list(state)
+        trajectory = []
+        norm_violations = 0
         while not planner.plan_finished():
             agent = planner.get_agent()
+  
             agent.epsilon = 0
             
             task = planner.get_task()
             task_name = task.replace(" ", "_")
             trajectory_file = os.path.join(trajectory_dir, f"trajectory_{task_name}.txt")
-            trajectory = []
+            
             
             qtable_path = os.path.join(qtable_dir, f"qtable_{task_name}.json")
             if os.path.exists(qtable_path):
@@ -110,9 +114,10 @@ if __name__ == "__main__":
             steps = 0
             goal_reached = False
             
+            
             while steps < 300 and not goal_reached:
                 steps += 1
-                action_index = np.argmax(agent.qtable.get(agent.state_index(state), np.zeros(len(agent.action_space))))
+                action_index = np.argmax(agent.qtable.get(agent.state_index(state), np.zeros(len(agent.action_space)-1)))
                 num = 6 if action_index <= 3 else 1
                 for _ in range(num):  
                     action = "0 " + agent.action_space[action_index]
@@ -126,15 +131,18 @@ if __name__ == "__main__":
                                         task=planner.get_task().split()[0],
                                         index=agent.state_index(state))
                 
-                trajectory.append((agent.state_index(state), action_index))
+                norm_violations += len(state.get('violations', []))
                 state = next_state
                 
                 if planner.get_task() not in planner.plan:
                     goal_reached = True
-            
-            with open(trajectory_file, "a") as f:
-                f.write(str(trajectory) + "\n")
+                    
             planner.update()
-        logging.info(f'Trajectory {trajectory_idx} recorded')
+        # with open('test.txt', "a") as file:
+        #     file.write(str(trajectory) + "\n")
+        logging.info(f'Run {trajectory_idx} Norm Violations: {norm_violations}')
+
+            
+
     
     sock_game.close()

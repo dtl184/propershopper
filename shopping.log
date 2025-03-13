@@ -1,87 +1,10 @@
-2025-03-05 16:16:44,857 - INFO - Starting experiment 0
-
-2025-03-05 16:16:44,859 - INFO - Experiment 0 Episode 0 Current Task: navigate basket
-2025-03-05 16:16:45,439 - INFO - Experiment 0 Episode 1 Current Task: navigate basket
-2025-03-05 16:16:45,917 - INFO - Experiment 0 Episode 2 Current Task: navigate basket
-2025-03-05 16:16:46,440 - INFO - Experiment 0 Episode 3 Current Task: navigate basket
-2025-03-05 16:16:47,001 - INFO - Experiment 0 Episode 4 Current Task: navigate basket
-2025-03-05 16:16:47,344 - INFO - Experiment 0 Episode 4 Current Task: get basket
-2025-03-05 16:16:47,893 - INFO - Experiment 0 Episode 5 Current Task: navigate basket
-2025-03-05 16:16:48,122 - INFO - Experiment 0 Episode 5 Current Task: get basket
-2025-03-05 16:16:48,367 - INFO - Experiment 0 Episode 5 Current Task: navigate yellow_bell_pepper
-2025-03-05 16:16:48,884 - INFO - Experiment 0 Episode 6 Current Task: navigate basket
-2025-03-05 16:16:49,394 - INFO - Experiment 0 Episode 7 Current Task: navigate basket
-2025-03-05 16:16:49,565 - INFO - Experiment 0 Episode 7 Current Task: get basket
-2025-03-05 16:16:49,625 - INFO - Experiment 0 Episode 7 Current Task: navigate sausage
-2025-03-05 16:16:50,179 - INFO - Experiment 0 Episode 8 Current Task: navigate basket
-2025-03-05 16:16:50,282 - INFO - Experiment 0 Episode 8 Current Task: get basket
-2025-03-05 16:16:50,301 - INFO - Experiment 0 Episode 8 Current Task: navigate cucumber
-2025-03-05 16:16:50,807 - INFO - Experiment 0 Episode 9 Current Task: navigate basket
-2025-03-05 16:16:51,038 - INFO - Experiment 0 Episode 9 Current Task: get basket
-2025-03-05 16:16:51,068 - INFO - Experiment 0 Episode 9 Current Task: navigate oranges
-2025-03-05 16:16:51,614 - INFO - Experiment 0 Episode 10 Current Task: navigate basket
-2025-03-05 16:16:51,878 - INFO - Experiment 0 Episode 10 Current Task: get basket
-2025-03-05 16:16:51,939 - INFO - Experiment 0 Episode 10 Current Task: navigate onion
-2025-03-05 16:16:52,475 - INFO - Experiment 0 Episode 11 Current Task: navigate basket
-2025-03-05 16:16:52,518 - INFO - Experiment 0 Episode 11 Current Task: get basket
-2025-03-05 16:16:52,550 - INFO - Experiment 0 Episode 11 Current Task: navigate sausage
-2025-03-05 16:16:53,166 - INFO - Experiment 0 Episode 12 Current Task: navigate basket
-2025-03-05 16:16:53,238 - INFO - Experiment 0 Episode 12 Current Task: get basket
-2025-03-05 16:16:53,277 - INFO - Experiment 0 Episode 12 Current Task: navigate sausage
-2025-03-05 16:16:53,835 - INFO - Experiment 0 Episode 13 Current Task: navigate basket
-2025-03-05 16:16:53,883 - INFO - Experiment 0 Episode 13 Current Task: get basket
-2025-03-05 16:16:53,922 - INFO - Experiment 0 Episode 13 Current Task: navigate cucumber
-2025-03-05 16:16:54,484 - INFO - Experiment 0 Episode 14 Current Task: navigate basket
-2025-03-05 16:16:54,601 - INFO - Experiment 0 Episode 14 Current Task: get basket
-2025-03-05 16:16:54,678 - INFO - Experiment 0 Episode 14 Current Task: navigate cheese_wheel
-2025-03-05 16:16:55,293 - INFO - Experiment 0 Episode 15 Current Task: navigate basket
-2025-03-05 16:16:55,354 - INFO - Experiment 0 Episode 15 Current Task: get basket
-2025-03-05 16:16:55,514 - INFO - Experiment 0 Episode 15 Current Task: navigate sausage
-2025-03-05 16:16:56,016 - INFO - Experiment 0 Episode 16 Current Task: navigate basket
-2025-03-05 16:16:56,083 - INFO - Experiment 0 Episode 16 Current Task: get basket
-2025-03-05 16:16:56,555 - INFO - Experiment 0 Episode 17 Current Task: navigate basket
-2025-03-05 16:16:56,608 - INFO - Experiment 0 Episode 17 Current Task: get basket
-2025-03-05 16:16:56,648 - INFO - Experiment 0 Episode 17 Current Task: navigate raspberry
-2025-03-05 16:16:57,145 - INFO - Experiment 0 Episode 18 Current Task: navigate basket
-2025-03-05 16:16:57,663 - INFO - Experiment 0 Episode 18 Current Task: get basket
-2025-03-05 16:16:57,669 - INFO - Experiment 0 Episode 18 Current Task: navigate strawberry_milk
-2025-03-05 16:16:58,111 - INFO - Experiment 0 Episode 19 Current Task: navigate basket
-2025-03-05 16:16:58,318 - INFO - Experiment 0 Episode 19 Current Task: get basket
-2025-03-05 16:16:58,330 - INFO - Experiment 0 Episode 19 Current Task: navigate oranges
-2025-03-05 16:16:58,886 - INFO - Experiment 0 Episode 20 Current Task: navigate basket
-2025-03-05 16:16:58,958 - INFO - Experiment 0 Episode 20 Current Task: get basket
-2025-03-05 16:16:59,491 - INFO - Experiment 0 Episode 21 Current Task: navigate basket
-2025-03-05 16:16:59,531 - INFO - Experiment 0 Episode 21 Current Task: get basket
-2025-03-05 16:16:59,585 - INFO - Experiment 0 Episode 21 Current Task: navigate chocolate_milk
-2025-03-05 16:17:00,168 - INFO - Experiment 0 Episode 22 Current Task: navigate basket
-2025-03-05 16:17:00,255 - INFO - Experiment 0 Episode 22 Current Task: get basket
-2025-03-05 16:17:00,463 - INFO - Experiment 0 Episode 22 Current Task: navigate banana
-2025-03-05 16:17:01,012 - INFO - Experiment 0 Episode 23 Current Task: navigate basket
-2025-03-05 16:17:01,065 - INFO - Experiment 0 Episode 23 Current Task: get basket
-2025-03-05 16:17:01,114 - INFO - Experiment 0 Episode 23 Current Task: navigate avocado
-2025-03-05 16:17:01,652 - INFO - Experiment 0 Episode 24 Current Task: navigate basket
-2025-03-05 16:17:01,774 - INFO - Experiment 0 Episode 24 Current Task: get basket
-2025-03-05 16:17:01,792 - INFO - Experiment 0 Episode 24 Current Task: navigate sausage
-2025-03-05 16:17:02,408 - INFO - Experiment 0 Episode 25 Current Task: navigate basket
-2025-03-05 16:17:02,559 - INFO - Experiment 0 Episode 25 Current Task: get basket
-2025-03-05 16:17:02,862 - INFO - Experiment 0 Episode 25 Current Task: navigate lettuce
-2025-03-05 16:17:03,441 - INFO - Experiment 0 Episode 26 Current Task: navigate basket
-2025-03-05 16:17:03,479 - INFO - Experiment 0 Episode 26 Current Task: get basket
-2025-03-05 16:17:03,486 - INFO - Experiment 0 Episode 26 Current Task: navigate broccoli
-2025-03-05 16:17:04,032 - INFO - Experiment 0 Episode 27 Current Task: navigate basket
-2025-03-05 16:17:04,301 - INFO - Experiment 0 Episode 27 Current Task: get basket
-2025-03-05 16:17:04,340 - INFO - Experiment 0 Episode 27 Current Task: navigate carrot
-2025-03-05 16:17:04,935 - INFO - Experiment 0 Episode 28 Current Task: navigate basket
-2025-03-05 16:17:05,218 - INFO - Experiment 0 Episode 28 Current Task: get basket
-2025-03-05 16:17:05,243 - INFO - Experiment 0 Episode 28 Current Task: navigate raspberry
-2025-03-05 16:17:05,800 - INFO - Experiment 0 Episode 29 Current Task: navigate basket
-2025-03-05 16:17:05,911 - INFO - Experiment 0 Episode 29 Current Task: get basket
-2025-03-05 16:17:05,930 - INFO - Experiment 0 Episode 29 Current Task: navigate red_bell_pepper
-2025-03-05 16:17:06,459 - INFO - Experiment 0 Episode 30 Current Task: navigate basket
-2025-03-05 16:17:06,554 - INFO - Experiment 0 Episode 30 Current Task: get basket
-2025-03-05 16:17:06,562 - INFO - Experiment 0 Episode 30 Current Task: navigate sausage
-2025-03-05 16:17:07,174 - INFO - Experiment 0 Episode 31 Current Task: navigate basket
-2025-03-05 16:17:07,538 - INFO - Experiment 0 Episode 31 Current Task: get basket
-2025-03-05 16:17:08,043 - INFO - Experiment 0 Episode 32 Current Task: navigate basket
-2025-03-05 16:17:08,107 - INFO - Experiment 0 Episode 32 Current Task: get basket
-2025-03-05 16:17:08,482 - INFO - Experiment 0 Episode 32 Current Task: navigate raspberry
+2025-03-12 15:36:59,051 - INFO - Run 0 Norm Violations: 5
+2025-03-12 15:37:06,240 - INFO - Run 1 Norm Violations: 4
+2025-03-12 15:37:11,165 - INFO - Run 2 Norm Violations: 2
+2025-03-12 15:37:16,288 - INFO - Run 3 Norm Violations: 1
+2025-03-12 15:37:17,337 - INFO - Run 4 Norm Violations: 1
+2025-03-12 15:37:21,378 - INFO - Run 5 Norm Violations: 1
+2025-03-12 15:37:26,087 - INFO - Run 6 Norm Violations: 2
+2025-03-12 15:37:33,115 - INFO - Run 7 Norm Violations: 2
+2025-03-12 15:37:40,210 - INFO - Run 8 Norm Violations: 1
+2025-03-12 15:37:48,728 - INFO - Run 9 Norm Violations: 2

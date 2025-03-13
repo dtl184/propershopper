@@ -72,9 +72,11 @@ def main():
 
     experiment_rewards = []
     num_episodes = 1000  # Generate 1000 trajectories
-
-    for episode in range(1, num_episodes + 1):
-        print(f"Starting episode {episode}")
+    trajs_added = 0
+    i = 0
+    while trajs_added < num_episodes:
+        print(f"Starting episode {i}")
+        i += 1
         global min_distance
         min_distance = 1000
 
@@ -109,9 +111,11 @@ def main():
             if cnt >= args.episode_length or goal_reached or next_state["gameOver"]:
                 break
 
-        save_trajectory(trajectory)  # Save the episode's trajectory
+        if goal_reached:
+            trajs_added += 1
+            save_trajectory(trajectory)  # Save the episode's trajectory
 
-        print(f"Episode {episode} Goal Reached {goal_reached}")
+        print(f"Episode {i} Goal Reached {goal_reached}")
 
     sock_game.close()
 
