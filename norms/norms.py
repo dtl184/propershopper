@@ -1,17 +1,17 @@
 import math
 from collections import defaultdict
 
-from checkout import Register
-from cart import Cart
-from shoppingcarts import Carts
-from baskets import Baskets
-from counters import Counter
-from basket import Basket
+from objects.checkout import Register
+from objects.cart import Cart
+from objects.shoppingcarts import Carts
+from objects.baskets import Baskets
+from objects.counters import Counter
+from objects.basket import Basket
 from enums.direction import Direction
 from enums.player_action import PlayerAction
 from helper import overlap
 from norms.norm import Norm, NormViolation
-from shelves import Shelf
+from objects.shelves import Shelf
 
 
 class CartTheftViolation(NormViolation):

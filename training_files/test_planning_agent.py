@@ -5,11 +5,11 @@ import random
 import socket
 
 import gymnasium as gym
-from env import SupermarketEnv
-from utils import recv_socket_data
+from env_files.env import SupermarketEnv
+from env_files.utils import recv_socket_data
 
 from Q_Learning_agent import QLAgent  # Make sure to import your QLAgent class 
-from planning_agent import PlanningAgent
+from agents.planning_agent import PlanningAgent
 import pickle
 import pandas as pd
 import argparse

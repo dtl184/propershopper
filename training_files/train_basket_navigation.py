@@ -4,7 +4,7 @@ import socket
 
 import gymnasium as gym
 from env import SupermarketEnv
-from utils import recv_socket_data
+from env_files.utils import recv_socket_data
 
 from basket_navi_agent import BasketNaviAgent 
 from constants import obj_list, obj_pos_dict
