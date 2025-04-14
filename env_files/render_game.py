@@ -1,5 +1,5 @@
 import pygame
-import config
+import env_files.config as config
 
 # right now the rendering functions aren't part of a class, not sure if that goes against python etiquette :/
 

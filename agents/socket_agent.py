@@ -6,7 +6,7 @@ import random
 import socket
 import QLAgent
 
-from env import SupermarketEnv
+from env_files.env import SupermarketEnv
 from env_files.utils import recv_socket_data
 
 

@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 import gymnasium as gym
 
 from enums.player_action import PlayerAction
-from env import SinglePlayerSupermarketEnv
+from env_files.env import SinglePlayerSupermarketEnv
 import json
 
 class NormViolation(ABC):

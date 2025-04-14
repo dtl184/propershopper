@@ -3,7 +3,7 @@ import time
 import gymnasium as gym
 import json
 from enums.player_action import PlayerAction
-from game import Game
+from env_files.game import Game
 
 MOVEMENT_ACTIONS = [PlayerAction.NORTH, PlayerAction.SOUTH, PlayerAction.EAST, PlayerAction.WEST]
 

@@ -1,22 +1,22 @@
 from random import uniform, choice
 
 import pygame
-import config
+import env_files.config as config
 import os
 import env_files.render_game as render
-from objects.camera import Camera
-from objects.cart import Cart
-from objects.basket import Basket
+from object_files.camera import Camera
+from object_files.cart import Cart
+from object_files.basket import Basket
 from collections import defaultdict
-from objects.checkout import Register
-from objects.counters import Counter
+from object_files.checkout import Register
+from object_files.counters import Counter
 from enums.cart_state import CartState
 from enums.direction import Direction
 from enums.player_action import PlayerAction
-from player import Player
-from objects.shelves import Shelf
-from objects.shoppingcarts import Carts
-from objects.baskets import Baskets
+from env_files.player import Player
+from object_files.shelves import Shelf
+from object_files.shoppingcarts import Carts
+from object_files.baskets import Baskets
 
 
 

@@ -1,11 +1,11 @@
 import pygame
-import config
+import env_files.config as config
 from enums.cart_state import CartState
-from objects.cart import Cart
+from object_files.cart import Cart
 from enums.direction import Direction
-from helper import obj_collision, can_interact_default, overlap
+from env_files.helper import obj_collision, can_interact_default, overlap
 from env_files.render_game import render_text
-from objects import InteractiveObject
+from object_files.objects import InteractiveObject
 
 
 class Carts(InteractiveObject):

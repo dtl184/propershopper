@@ -2,11 +2,11 @@ from collections import defaultdict
 
 import pygame
 
-import config
+import env_files.config as config
 from enums.cart_state import CartState
 from enums.direction import Direction
-from helper import can_interact_default, overlap
-from objects import CartLike
+from env_files.helper import can_interact_default, overlap
+from object_files.objects import CartLike
 from env_files.render_game import render_text
 
 

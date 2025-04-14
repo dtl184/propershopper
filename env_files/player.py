@@ -2,11 +2,11 @@ from collections import defaultdict
 from random import randint
 
 import pygame
-import config
+import env_files.config as config
 import env_files.sprite_builder as sprite_builder
 from enums.direction import Direction
 from enums.cart_state import CartState
-from helper import obj_collision, overlap
+from env_files.helper import obj_collision, overlap
 from env_files.render_game import render_text
 
 

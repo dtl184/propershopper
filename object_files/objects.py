@@ -3,7 +3,7 @@ from collections import defaultdict
 
 import pygame
 
-import config
+import env_files.config as config
 from enums.cart_state import CartState
 from enums.direction import Direction
 from env_files.render_game import render_textbox, render_text

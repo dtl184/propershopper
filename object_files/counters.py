@@ -1,10 +1,10 @@
 import pygame
-import config
+import env_files.config as config
 # import random
 from enums.cart_state import CartState
-from helper import obj_collision, can_interact_default, overlap
+from env_files.helper import obj_collision, can_interact_default, overlap
 from env_files.render_game import render_text
-from objects import InteractiveObject
+from object_files.objects import InteractiveObject
 
 
 class Counter(InteractiveObject):

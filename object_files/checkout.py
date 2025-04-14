@@ -1,9 +1,8 @@
-import config
+import env_files.config as config
 import pygame
 from collections import defaultdict
-from helper import can_interact_default
-from helper import overlap
-from objects import InteractiveObject
+from env_files.helper import can_interact_default, overlap
+from object_files.objects import InteractiveObject
 from env_files.render_game import render_text
 
 

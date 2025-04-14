@@ -5,7 +5,7 @@ import selectors
 import socket
 import types
 import os
-from env import SupermarketEnv, SinglePlayerSupermarketEnv
+from env_files.env import SupermarketEnv, SinglePlayerSupermarketEnv
 from norms.norm import NormWrapper
 from norms.norms import *
 import numpy as np
